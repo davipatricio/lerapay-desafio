@@ -1,0 +1,36 @@
+{
+  "name": "@lerapay/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "react-router dev",
+    "build": "react-router build",
+    "start": "react-router-serve ./build/server/index.js",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "react-router typegen && tsc"
+  },
+  "dependencies": {
+    "@react-router/node": "8.3.0",
+    "@react-router/serve": "8.3.0",
+    "isbot": "5.2.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "8.3.0"
+  },
+  "devDependencies": {
+    "@react-router/dev": "8.3.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "catalog:",
+    "@types/react": "19.2.13",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "tailwindcss": "4.3.3",
+    "typescript": "catalog:frontend",
+    "vite": "8.2.1"
+  }
+}

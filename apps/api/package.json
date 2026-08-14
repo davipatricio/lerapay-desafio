@@ -1,0 +1,37 @@
+{
+  "name": "@lerapay/api",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "start:prod": "node dist/main.js",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.2.0",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.2.0",
+    "@nestjs/platform-express": "11.2.0",
+    "@nestjs/swagger": "11.4.6",
+    "@nestjs/typeorm": "11.0.3",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "mysql2": "3.23.3",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "typeorm": "1.1.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "11.0.24",
+    "@types/express": "5.0.6",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:backend"
+  }
+}

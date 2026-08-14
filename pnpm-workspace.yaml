@@ -1,0 +1,28 @@
+packages:
+  - apps/*
+
+allowBuilds:
+  '@scarf/scarf': false
+
+catalog:
+  "@types/node": 26.2.0
+  oxfmt: 0.63.0
+  oxlint: 1.78.0
+
+catalogs:
+  frontend:
+    typescript: 7.0.2
+  backend:
+    typescript: 6.0.3
+
+minimumReleaseAgeExclude:
+  - '@nestjs/common@11.2.0'
+  - '@nestjs/core@11.2.0'
+  - '@nestjs/platform-express@11.2.0'
+  - '@turbo/darwin-64@2.10.10'
+  - '@turbo/darwin-arm64@2.10.10'
+  - '@turbo/linux-64@2.10.10'
+  - '@turbo/linux-arm64@2.10.10'
+  - '@turbo/windows-64@2.10.10'
+  - '@turbo/windows-arm64@2.10.10'
+  - turbo@2.10.10

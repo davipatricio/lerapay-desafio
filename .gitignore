@@ -1,0 +1,12 @@
+node_modules/
+dist/
+build/
+.turbo/
+.react-router/
+.env
+.env.*
+!.env.example
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
