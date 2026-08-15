@@ -18,5 +18,23 @@
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "turbo": "2.10.10"
+  },
+  "workspaces": {
+    "packages": [
+      "apps/*"
+    ],
+    "catalog": {
+      "@types/node": "26.2.0",
+      "oxfmt": "0.63.0",
+      "oxlint": "1.78.0"
+    },
+    "catalogs": {
+      "frontend": {
+        "typescript": "7.0.2"
+      },
+      "backend": {
+        "typescript": "6.0.3"
+      }
+    }
   }
 }
