@@ -8,6 +8,7 @@ React Router 8 frontend application for the LeraPay monorepo. This file is scope
 - **UI**: React 19 (`react`/`react-dom` 19.2.8).
 - **Language**: TypeScript 7.0.2 (`catalog:frontend`).
 - **Styling**: Tailwind CSS v4 via `@tailwindcss/vite` (no separate config file — Tailwind is driven by the Vite plugin).
+- **UI Library**: shadcn-style components (configured via `components.json`), built on top of Tailwind v4.
 - **Bundler**: Vite 8 (`vite` 8.2.1) with `@vitejs/plugin-react` and the `reactRouter()` plugin.
 - **Lint/Format**: `oxlint` + `oxfmt` (not ESLint/Prettier), per the monorepo standard.
 
@@ -41,6 +42,34 @@ apps/web
 ```
 
 The app currently has a single `home` route. When adding a domain route, create `app/routes/<name>.tsx` and register it in `app/routes.ts`.
+
+## shadcn UI Library
+
+The project uses **shadcn-style components** configured via `components.json`. This setup provides:
+
+- **Component registry**: reusable UI components (buttons, inputs, cards, etc.)
+- **Tailwind v4 integration**: components use Tailwind's CSS variables and `@theme` directives
+- **TypeScript-first**: all components are typed with React 19
+
+### Adding Components
+
+Use the shadcn CLI to add components:
+
+```bash
+pnpm dlx shadcn@latest add <component-name>
+```
+
+This will:
+1. Add the component to `app/components/`
+2. Register any dependencies in `package.json`
+3. Update `components.json` if needed
+
+### Component Conventions
+
+- Components live in `app/components/` (not `src/`)
+- Use Tailwind v4 utility classes — no custom CSS modules
+- Follow React 19 conventions (no legacy lifecycle methods)
+- Export typed props using `React.ComponentPropsWithoutRef` when extending native elements
 
 ## Environment
 

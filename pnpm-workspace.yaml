@@ -1,11 +1,12 @@
 packages:
   - apps/*
+  - packages/*
 
 allowBuilds:
   '@scarf/scarf': false
 
 catalog:
-  "@types/node": 26.2.0
+  '@types/node': 26.2.0
   oxfmt: 0.63.0
   oxlint: 1.78.0
 
