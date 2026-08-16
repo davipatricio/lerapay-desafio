@@ -1,9 +1,11 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthModule } from './auth/auth.module';
 import { CorrelationIdMiddleware, HttpLoggerMiddleware, RequestContextModule } from './common';
 import { GatewayModule } from './gateway';
 import { HealthModule } from './health';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { HealthModule } from './health';
     RequestContextModule,
     GatewayModule,
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule implements NestModule {

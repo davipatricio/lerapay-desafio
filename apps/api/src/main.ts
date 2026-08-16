@@ -17,9 +17,10 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('LeraPay API')
-    .setDescription('API da LeraPay')
+    .setTitle('LeraPay BaaS API')
+    .setDescription('Banking as a Service (BaaS) API integrated with Lera Box simulated gateway')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
