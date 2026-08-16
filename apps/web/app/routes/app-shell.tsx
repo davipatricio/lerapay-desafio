@@ -2,7 +2,12 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getAccessToken, getSessionUser, clearSession } from '../lib/auth/token';
+import {
+  getAccessToken,
+  getSessionUser,
+  clearSession,
+} from '../lib/auth/token';
+import { isLocalSessionExpiredError } from '../lib/api/errors';
 import { queryKeys } from '../lib/query/keys';
 import { useMeQuery } from '../lib/queries';
 import { navItems, findActiveNav } from '../lib/navigation';
@@ -55,7 +60,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Landmark, ShieldAlert, LogOut, ChevronsUpDown, Search } from 'lucide-react';
+import { Landmark, ShieldAlert, ShieldCheck, LogOut, ChevronsUpDown, Search } from 'lucide-react';
 import { Kbd } from '@/components/ui/kbd';
 import { Button } from '@/components/ui/button';
 import type { Route } from './+types/app-shell';
@@ -97,14 +102,44 @@ export default function AppShell() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [gatewayPending, setGatewayPending] = useState(false);
   const sessionUser = getSessionUser();
 
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const handleShortcutNavigate = useCallback((path: string) => navigate(path), [navigate]);
   useGlobalShortcuts({ onNavigate: handleShortcutNavigate, onOpenPalette: openPalette });
 
-  const { data: meUser } = useMeQuery();
+  const { data: meUser, error: meError } = useMeQuery();
   const user = meUser || sessionUser;
+
+  useEffect(() => {
+    if (isLocalSessionExpiredError(meError)) {
+      clearSession();
+      queryClient.clear();
+      navigate('/auth/login', { replace: true });
+    }
+  }, [meError, navigate, queryClient]);
+
+  useEffect(() => {
+    const handleGatewayPending = () => setGatewayPending(true);
+    const handleGatewayLinked = () => setGatewayPending(false);
+    window.addEventListener('lerapay:gateway-pending', handleGatewayPending);
+    window.addEventListener('lerapay:gateway-linked', handleGatewayLinked);
+    return () => {
+      window.removeEventListener('lerapay:gateway-pending', handleGatewayPending);
+      window.removeEventListener('lerapay:gateway-linked', handleGatewayLinked);
+    };
+  }, []);
+
+  // Check if gateway token is expired
+  const gatewayAccount = user?.gatewayAccount;
+  const isGatewayTokenExpired =
+    gatewayPending ||
+    Boolean(
+      gatewayAccount?.isLinked &&
+        gatewayAccount?.tokenExpiresAt &&
+        new Date(gatewayAccount.tokenExpiresAt) < new Date(),
+    );
 
   // Client-side auth guard: the JWT lives in localStorage (not a cookie), so SSR
   // cannot see it. On the client, redirect to /auth/login when there is no token.
@@ -131,7 +166,7 @@ export default function AppShell() {
     toast.success('Sessão encerrada');
   };
 
-  const isGatewayLinked = Boolean(user?.gatewayAccount?.isLinked);
+  const isGatewayLinked = Boolean(user?.gatewayAccount?.isLinked) && !gatewayPending;
   const activeNav = findActiveNav(location.pathname);
 
   const initials = user?.name
@@ -196,9 +231,17 @@ export default function AppShell() {
                         <span className="truncate font-semibold">
                           {user?.name?.split(' ')[0] ?? 'Lojista'}
                         </span>
-                        {!isGatewayLinked && (
+                        {isGatewayTokenExpired ? (
+                          <span className="flex items-center gap-1 truncate text-xs font-medium text-warning">
+                            <ShieldAlert className="size-3" /> Sessão Expirada
+                          </span>
+                        ) : !isGatewayLinked ? (
                           <span className="flex items-center gap-1 truncate text-xs font-medium text-warning">
                             <ShieldAlert className="size-3" /> Vincular Gateway
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 truncate text-xs font-medium text-success">
+                            <ShieldCheck className="size-3" /> Conectado
                           </span>
                         )}
                       </div>
@@ -215,7 +258,16 @@ export default function AppShell() {
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuGroup>
-                    {!isGatewayLinked && (
+                    {isGatewayTokenExpired && (
+                      <>
+                        <DropdownMenuItem onClick={() => setLinkOpen(true)} className="text-warning">
+                          <ShieldAlert className="text-warning" />
+                          Re-autenticar Gateway
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {!isGatewayLinked && !isGatewayTokenExpired && (
                       <>
                         <DropdownMenuItem onClick={() => setLinkOpen(true)}>
                           <ShieldAlert className="text-warning" />

@@ -2,16 +2,18 @@ import { Controller, Get, HttpStatus, Optional } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { DataSource } from 'typeorm';
 
-@ApiTags('health')
+@ApiTags('saúde')
 @Controller('health')
 export class HealthController {
   constructor(@Optional() private readonly dataSource?: DataSource) {}
 
   @Get()
-  @ApiOperation({ summary: 'Check API and database health status' })
+  @ApiOperation({
+    summary: 'Verifica a integridade da API e o status de conexão com o banco de dados',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'System health information',
+    description: 'Informações sobre a saúde e integridade do sistema',
     schema: {
       type: 'object',
       properties: {

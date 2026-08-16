@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { defaultApiClient } from '../../api/client';
 import { queryKeys } from '../../query/keys';
-import { setSessionUser } from '../../auth/token';
+import { markGatewayLinked, setSessionUser } from '../../auth/token';
 import type {
   ApiRequestOptions,
   AuthResponse,
@@ -43,6 +43,7 @@ export function useLinkGatewayMutation(options?: { requestOptions?: ApiRequestOp
       defaultApiClient.linkGateway(payload, options?.requestOptions),
     onSuccess: (updatedUser) => {
       setSessionUser(updatedUser);
+      markGatewayLinked();
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.wallet.all() });
       queryClient.invalidateQueries({ queryKey: queryKeys.withdrawals.all() });

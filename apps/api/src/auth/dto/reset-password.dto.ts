@@ -4,7 +4,7 @@ import { IsEmail, IsOptional, IsString } from 'class-validator';
 export class ResetPasswordDto {
   @ApiPropertyOptional({
     example: '12345678909',
-    description: 'Document (CPF/CNPJ) registered on gateway',
+    description: 'Documento (CPF/CNPJ) cadastrado no gateway Lera Box',
   })
   @IsOptional()
   @IsString()
@@ -12,7 +12,7 @@ export class ResetPasswordDto {
 
   @ApiPropertyOptional({
     example: 'joao@example.com',
-    description: 'Email registered on gateway',
+    description: 'E-mail cadastrado no gateway Lera Box',
   })
   @IsOptional()
   @IsEmail()

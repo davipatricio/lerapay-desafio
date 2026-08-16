@@ -1,5 +1,7 @@
 import {
+  BadGatewayException,
   ConflictException,
+  HttpException,
   Injectable,
   Logger,
   NotFoundException,
@@ -39,13 +41,13 @@ export class AuthService {
   public async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const existingEmail = await this.usersService.findByEmail(dto.email);
     if (existingEmail) {
-      throw new ConflictException('Email is already registered');
+      throw new ConflictException('E-mail já cadastrado');
     }
 
     const cleanDocument = dto.document.replace(/\D/g, '');
     const existingDoc = await this.usersService.findByDocument(cleanDocument);
     if (existingDoc) {
-      throw new ConflictException('Document (CPF/CNPJ) is already registered');
+      throw new ConflictException('Documento (CPF/CNPJ) já cadastrado');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -70,7 +72,7 @@ export class AuthService {
 
     let gatewayMessage: string | undefined;
 
-    // Auto-register on Lera Box Gateway if requested
+    // Cadastro automático no gateway Lera Box se solicitado
     if (dto.autoRegisterGateway !== false) {
       try {
         const gatewayRes = await this.gatewayService.createUser({
@@ -89,20 +91,20 @@ export class AuthService {
         });
         gatewayMessage = gatewayRes.message;
 
-        // Auto-login to gateway on signup to immediately associate merchant token & credentials
+        // Login automático no gateway no cadastro para associar token e credenciais do lojista imediatamente
         try {
           await this.authenticateWithGateway(user, cleanDocument, dto.password);
         } catch (loginErr: any) {
           this.logger.debug(
-            `Immediate gateway login after registration for user ${user.id} returned notice: ${loginErr?.message || loginErr}`,
+            `Tentativa de login imediato no gateway após cadastro para o usuário ${user.id} retornou aviso: ${loginErr?.message || loginErr}`,
           );
         }
       } catch (err: any) {
         this.logger.warn(
-          `Gateway registration for user ${user.id} returned notice: ${err?.message || err}`,
+          `Registro no gateway para o usuário ${user.id} retornou aviso: ${err?.message || err}`,
         );
         gatewayMessage =
-          'Local account created. Gateway credentials will be sent if registration succeeds.';
+          'Conta local criada. As credenciais do gateway serão enviadas por e-mail se o cadastro for processado com sucesso.';
       }
     }
 
@@ -116,22 +118,22 @@ export class AuthService {
       : await this.usersService.findByDocument(dto.emailOrDocument);
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    // If gateway password was provided, attempt linking/refreshing gateway token
+    // Se a senha do gateway foi informada, tenta vincular/renovar o token do gateway
     const gatewayPass = dto.gatewayPassword || dto.password;
     if (gatewayPass) {
       try {
         await this.authenticateWithGateway(user, user.document, gatewayPass);
       } catch (err: any) {
         this.logger.debug(
-          `Gateway login attempt for user ${user.id} returned notice: ${err?.message || err}`,
+          `Tentativa de login no gateway para o usuário ${user.id} retornou aviso: ${err?.message || err}`,
         );
       }
     }
@@ -146,7 +148,7 @@ export class AuthService {
     let email = dto.email?.toLowerCase().trim();
 
     if (!cleanDoc && !email) {
-      throw new ConflictException('Either document or email must be provided');
+      throw new ConflictException('Informe o documento (CPF/CNPJ) ou o e-mail');
     }
 
     if (!cleanDoc && email) {
@@ -168,10 +170,13 @@ export class AuthService {
       });
       return res;
     } catch (err: any) {
-      this.logger.warn(`Gateway reset password request failed: ${err?.message || err}`);
+      this.logger.warn(
+        `Solicitação de redefinição de senha no gateway falhou: ${err?.message || err}`,
+      );
       return {
         success: true,
-        message: 'If the account exists on the gateway, reset instructions have been sent.',
+        message:
+          'Se a conta existir no gateway, as instruções de redefinição de senha foram enviadas.',
       };
     }
   }
@@ -179,7 +184,7 @@ export class AuthService {
   public async linkGateway(userId: string, dto: LinkGatewayDto): Promise<UserProfileDto> {
     const user = await this.usersService.findById(userId);
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('Usuário não encontrado');
     }
 
     const cleanDocument = dto.document.replace(/\D/g, '');
@@ -191,8 +196,15 @@ export class AuthService {
           'Credenciais do gateway inválidas. Use o documento e a senha enviados por e-mail pelo Lera Box, ou redefina a senha.',
         );
       }
-      this.logger.warn(`Gateway link failed for user ${user.id}: ${err?.message || err}`);
-      throw err;
+      this.logger.warn(
+        `Falha ao vincular gateway para o usuário ${user.id}: ${err?.message || err}`,
+      );
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      throw new BadGatewayException(
+        'Falha na comunicação com o gateway Lera Box ao vincular credenciais.',
+      );
     }
 
     return this.mapToProfile(user);

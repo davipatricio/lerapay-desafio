@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { TransactionTypeBadge } from '@/components/dashboard/transaction-type-badge';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatDateTime, formatReference } from '@/lib/dashboard';
 import {
@@ -28,9 +29,6 @@ import {
   RefreshCw,
   Receipt,
   SlidersHorizontal,
-  CreditCard,
-  QrCode,
-  ArrowUpRight,
 } from 'lucide-react';
 import { walletBalanceQueryOptions, walletTransactionsQueryOptions } from '../../lib/queries';
 import { useDashboardQuery } from '../../lib/query/options';
@@ -58,7 +56,7 @@ const typeItems = [
   { value: 'ALL', label: 'Todos os tipos' },
   { value: 'PIX', label: 'Pix' },
   { value: 'CREDIT_CARD', label: 'Cartão de Crédito' },
-  { value: 'WITHDRAWAL', label: 'Saque' },
+  { value: 'WITHDRAWAL', label: 'Saque Pix' },
 ];
 
 export default function WalletPage(_props: Route.ComponentProps) {
@@ -281,16 +279,7 @@ export default function WalletPage(_props: Route.ComponentProps) {
                         {formatDateTime(tx.createdAt)}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {tx.type === 'PIX' && <QrCode className="size-3.5 text-emerald-500" />}
-                          {tx.type === 'CREDIT_CARD' && (
-                            <CreditCard className="size-3.5 text-sky-500" />
-                          )}
-                          {tx.type === 'WITHDRAWAL' && (
-                            <ArrowUpRight className="size-3.5 text-amber-500" />
-                          )}
-                          <span className="text-xs font-medium">{tx.type}</span>
-                        </div>
+                        <TransactionTypeBadge type={tx.type} />
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {formatReference(tx.externalReference || tx.id)}

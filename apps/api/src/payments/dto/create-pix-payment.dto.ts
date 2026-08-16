@@ -2,18 +2,21 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Min } from 'class-validator';
 
 export class CreatePixPaymentDto {
-  @ApiProperty({ example: 5000, description: 'Amount in centavos (e.g. 5000 = R$ 50,00)' })
+  @ApiProperty({ example: 5000, description: 'Valor em centavos (ex.: 5000 = R$ 50,00)' })
   @IsInt()
   @IsPositive()
   @Min(100)
   amount: number;
 
-  @ApiProperty({ example: '12345678909', description: 'CPF/CNPJ of the payer' })
+  @ApiProperty({ example: '12345678909', description: 'CPF ou CNPJ do pagador' })
   @IsString()
   @IsNotEmpty()
   payerDocument: string;
 
-  @ApiPropertyOptional({ example: 'Pagamento de Pedido #1234', description: 'Payment description' })
+  @ApiPropertyOptional({
+    example: 'Pagamento de Pedido #1234',
+    description: 'Descrição do pagamento',
+  })
   @IsOptional()
   @IsString()
   description?: string;
@@ -21,7 +24,7 @@ export class CreatePixPaymentDto {
   @ApiPropertyOptional({
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     description:
-      'Checkout Link ID. When provided, the server enforces its active status, expiration, allowed method, fixed amount, and reconciliation reference.',
+      'ID do link de checkout. Quando informado, o servidor valida o status ativo, expiração, método permitido, valor fixo e referência de conciliação.',
   })
   @IsOptional()
   @IsString()
@@ -29,7 +32,7 @@ export class CreatePixPaymentDto {
 
   @ApiPropertyOptional({
     example: 'ORD-2026-9988',
-    description: 'External reference for reconciliation',
+    description: 'Referência externa para conciliação',
   })
   @IsOptional()
   @IsString()

@@ -1,11 +1,25 @@
-import { QueryClient, defaultShouldDehydrateQuery } from '@tanstack/react-query';
-import { ApiClientError } from '../api/errors';
+import { QueryCache, QueryClient, defaultShouldDehydrateQuery } from '@tanstack/react-query';
+import { isGatewayReauthError, isLocalSessionExpiredError } from '../api/errors';
+import { clearSession, markGatewayPending } from '../auth/token';
 
 /**
  * Creates a new QueryClient instance with SSR-safe default configuration.
  */
 export function createQueryClient(): QueryClient {
   return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error, _query) => {
+        if (isGatewayReauthError(error)) {
+          markGatewayPending();
+          return;
+        }
+
+        if (typeof window !== 'undefined' && isLocalSessionExpiredError(error)) {
+          clearSession();
+          window.location.assign('/auth/login');
+        }
+      },
+    }),
     defaultOptions: {
       queries: {
         // Data is considered fresh for 60s to prevent immediate refetches after SSR hydration
@@ -21,9 +35,10 @@ export function createQueryClient(): QueryClient {
 
           // Do not retry on client-side 4xx errors
           if (
-            error instanceof ApiClientError &&
-            error.statusCode >= 400 &&
-            error.statusCode < 500
+            isLocalSessionExpiredError(error) ||
+            isGatewayReauthError(error) ||
+            (error && typeof error === 'object' && 'statusCode' in error &&
+              Number(error.statusCode) >= 400 && Number(error.statusCode) < 500)
           ) {
             return false;
           }

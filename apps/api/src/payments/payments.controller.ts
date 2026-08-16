@@ -6,14 +6,17 @@ import { CreateCardPaymentDto } from './dto/create-card-payment.dto';
 import { CreatePixPaymentDto } from './dto/create-pix-payment.dto';
 import { PaymentsService } from './payments.service';
 
-@ApiTags('payments')
+@ApiTags('pagamentos')
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('pix')
-  @ApiOperation({ summary: 'Initiate a public Pix payment for a checkout link' })
-  @ApiResponse({ status: 201, description: 'Pix payment created with QR code and EMV payload' })
+  @ApiOperation({ summary: 'Inicia um pagamento Pix público para um link de checkout' })
+  @ApiResponse({
+    status: 201,
+    description: 'Pagamento Pix criado com QR code e código copia-e-cola (EMV)',
+  })
   public async createPix(@Body() dto: CreatePixPaymentDto) {
     return this.paymentsService.createPixPayment(dto);
   }
@@ -21,8 +24,11 @@ export class PaymentsController {
   @Post('merchant/pix')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Initiate a direct Pix payment for the authenticated merchant' })
-  @ApiResponse({ status: 201, description: 'Pix payment created with QR code and EMV payload' })
+  @ApiOperation({ summary: 'Inicia um pagamento Pix direto para o lojista autenticado' })
+  @ApiResponse({
+    status: 201,
+    description: 'Pagamento Pix criado com QR code e código copia-e-cola (EMV)',
+  })
   public async createMerchantPix(
     @Body() dto: CreatePixPaymentDto,
     @CurrentUser('id') userId: string,
@@ -31,8 +37,8 @@ export class PaymentsController {
   }
 
   @Post('card')
-  @ApiOperation({ summary: 'Process a public card payment for a checkout link' })
-  @ApiResponse({ status: 201, description: 'Card payment processed' })
+  @ApiOperation({ summary: 'Processa um pagamento público via cartão para um link de checkout' })
+  @ApiResponse({ status: 201, description: 'Pagamento com cartão processado com sucesso' })
   public async createCard(@Body() dto: CreateCardPaymentDto) {
     return this.paymentsService.createCardPayment(dto);
   }
@@ -40,8 +46,8 @@ export class PaymentsController {
   @Post('merchant/card')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Process a direct card payment for the authenticated merchant' })
-  @ApiResponse({ status: 201, description: 'Card payment processed' })
+  @ApiOperation({ summary: 'Processa um pagamento direto via cartão para o lojista autenticado' })
+  @ApiResponse({ status: 201, description: 'Pagamento com cartão processado com sucesso' })
   public async createMerchantCard(
     @Body() dto: CreateCardPaymentDto,
     @CurrentUser('id') userId: string,
@@ -50,8 +56,8 @@ export class PaymentsController {
   }
 
   @Get('checkout-links/:checkoutLinkId/:orderId')
-  @ApiOperation({ summary: 'Retrieve the minimal public status for a checkout payment' })
-  @ApiResponse({ status: 200, description: 'Checkout payment status' })
+  @ApiOperation({ summary: 'Consulta o status público simplificado de um pagamento de checkout' })
+  @ApiResponse({ status: 200, description: 'Status do pagamento do checkout' })
   public async getPublicCheckoutPayment(
     @Param('checkoutLinkId') checkoutLinkId: string,
     @Param('orderId') orderId: string,
@@ -62,8 +68,8 @@ export class PaymentsController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retrieve a payment owned by the authenticated merchant' })
-  @ApiResponse({ status: 200, description: 'Payment details' })
+  @ApiOperation({ summary: 'Consulta um pagamento pertencente ao lojista autenticado' })
+  @ApiResponse({ status: 200, description: 'Detalhes do pagamento' })
   public async getPayment(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.paymentsService.getMerchantPayment(id, userId);
   }

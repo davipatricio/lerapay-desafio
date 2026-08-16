@@ -4,6 +4,8 @@ import type { RequestContextStore } from './request-context.types';
 
 @Injectable()
 export class RequestContextService {
+  // Mantém dados de cada requisição na própria cadeia assíncrona, evitando
+  // repassar correlação, usuário e token manualmente por todos os serviços.
   private static readonly storage = new AsyncLocalStorage<RequestContextStore>();
 
   public run<R>(store: RequestContextStore, callback: () => R): R {

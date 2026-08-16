@@ -4,14 +4,14 @@ import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Min } from
 export class CreateWithdrawalDto {
   @ApiProperty({
     example: 10000,
-    description: 'Withdrawal amount in centavos (e.g. 10000 = R$ 100,00)',
+    description: 'Valor do saque em centavos (ex.: 10000 = R$ 100,00)',
   })
   @IsInt()
   @IsPositive()
   @Min(100)
   amount: number;
 
-  @ApiProperty({ example: 'joao@example.com', description: 'Pix destination key' })
+  @ApiProperty({ example: 'joao@example.com', description: 'Chave Pix de destino para o saque' })
   @IsString()
   @IsNotEmpty()
   pixKey: string;
@@ -19,7 +19,7 @@ export class CreateWithdrawalDto {
   @ApiPropertyOptional({
     enum: ['CPF', 'CNPJ', 'EMAIL', 'PHONE', 'RANDOM'],
     default: 'CPF',
-    description: 'Pix key type',
+    description: 'Tipo da chave Pix',
   })
   @IsOptional()
   @IsEnum(['CPF', 'CNPJ', 'EMAIL', 'PHONE', 'RANDOM'])
@@ -27,13 +27,16 @@ export class CreateWithdrawalDto {
 
   @ApiPropertyOptional({
     example: '12345678909',
-    description: 'Document of the Pix key owner (defaults to merchant document)',
+    description: 'Documento (CPF/CNPJ) do titular da chave Pix (padrão: documento do lojista)',
   })
   @IsOptional()
   @IsString()
   document?: string;
 
-  @ApiPropertyOptional({ example: 'Transferência de saldo', description: 'Withdrawal description' })
+  @ApiPropertyOptional({
+    example: 'Transferência de saldo',
+    description: 'Descrição opcional do saque',
+  })
   @IsOptional()
   @IsString()
   description?: string;

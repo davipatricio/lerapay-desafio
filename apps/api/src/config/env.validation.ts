@@ -7,7 +7,7 @@ function parsePositiveInteger(value: unknown, name: string, fallback: number): n
 
   const number = Number(value);
   if (!Number.isInteger(number) || number < 1) {
-    throw new Error(`${name} must be a positive integer`);
+    throw new Error(`${name} deve ser um número inteiro positivo`);
   }
 
   return number;
@@ -16,7 +16,7 @@ function parsePositiveInteger(value: unknown, name: string, fallback: number): n
 function parsePort(value: unknown, name: string, fallback: number): number {
   const port = parsePositiveInteger(value, name, fallback);
   if (port > 65535) {
-    throw new Error(`${name} must be an integer between 1 and 65535`);
+    throw new Error(`${name} deve ser um número inteiro entre 1 e 65535`);
   }
 
   return port;
@@ -25,17 +25,18 @@ function parsePort(value: unknown, name: string, fallback: number): number {
 export function validateEnvironment(config: Environment): Environment {
   const jwtSecret = typeof config.JWT_SECRET === 'string' ? config.JWT_SECRET.trim() : '';
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET must be configured');
+    throw new Error('JWT_SECRET deve ser configurada');
   }
 
   const isProduction = config.NODE_ENV === 'production';
+  // Em produção, um segredo curto ou conhecido torna a assinatura de JWT previsível.
   if (
     isProduction &&
     (jwtSecret.length < 32 ||
       jwtSecret === 'change-me-to-a-long-random-secret' ||
       jwtSecret === 'lerapay-baas-dev-secret-key-2026')
   ) {
-    throw new Error('JWT_SECRET must be a strong, non-default secret in production');
+    throw new Error('JWT_SECRET deve ser um segredo forte e diferente do valor padrão em produção');
   }
 
   return {

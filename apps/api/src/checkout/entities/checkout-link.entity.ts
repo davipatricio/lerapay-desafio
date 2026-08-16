@@ -29,7 +29,7 @@ export class CheckoutLink {
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
-  @Column({ type: 'int', comment: 'Amount in centavos' })
+  @Column({ type: 'int', comment: 'Valor em centavos' })
   amount: number;
 
   @Column({ type: 'simple-json', name: 'allowed_methods' })

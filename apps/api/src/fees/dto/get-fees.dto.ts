@@ -4,7 +4,7 @@ import { IsEnum, IsOptional } from 'class-validator';
 export class GetFeesQueryDto {
   @ApiPropertyOptional({
     enum: ['VISA', 'MASTERCARD', 'ELO'],
-    description: 'Filter fee table by card brand',
+    description: 'Filtrar tabela de taxas pela bandeira do cartão',
   })
   @IsOptional()
   @IsEnum(['VISA', 'MASTERCARD', 'ELO'])

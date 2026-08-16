@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,7 @@ import {
   ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
+import { TransactionTypeBadge } from '@/components/dashboard/transaction-type-badge';
 import {
   checkoutLinksQueryOptions,
   useMeQuery,
@@ -157,6 +158,18 @@ function VolumeChartSkeleton() {
 export default function Dashboard(_props: Route.ComponentProps) {
   const { data: meUser } = useMeQuery();
   const [linkOpen, setLinkOpen] = useState(false);
+  const [gatewayPending, setGatewayPending] = useState(false);
+
+  useEffect(() => {
+    const handlePending = () => setGatewayPending(true);
+    const handleLinked = () => setGatewayPending(false);
+    window.addEventListener('lerapay:gateway-pending', handlePending);
+    window.addEventListener('lerapay:gateway-linked', handleLinked);
+    return () => {
+      window.removeEventListener('lerapay:gateway-pending', handlePending);
+      window.removeEventListener('lerapay:gateway-linked', handleLinked);
+    };
+  }, []);
 
   const {
     data: wallet,
@@ -215,12 +228,19 @@ export default function Dashboard(_props: Route.ComponentProps) {
     refetchTransactions();
   };
 
-  const isGatewayLinked = Boolean(meUser?.gatewayAccount?.isLinked);
+  const isGatewayTokenExpired =
+    gatewayPending ||
+    Boolean(
+      meUser?.gatewayAccount?.isLinked &&
+        meUser.gatewayAccount.tokenExpiresAt &&
+        new Date(meUser.gatewayAccount.tokenExpiresAt) < new Date(),
+    );
+  const isGatewayLinked = Boolean(meUser?.gatewayAccount?.isLinked) && !isGatewayTokenExpired;
 
   return (
     <div className="flex flex-col gap-5">
       {/* Gateway link status banner */}
-      {!isGatewayLinked && (
+      {(!isGatewayLinked || isGatewayTokenExpired) && (
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
@@ -229,12 +249,14 @@ export default function Dashboard(_props: Route.ComponentProps) {
               </div>
               <div>
                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                  Sua conta ainda não está vinculada ao Gateway Lera Box
+                  {isGatewayTokenExpired
+                    ? 'A associação com o Gateway Lera Box está pendente'
+                    : 'Sua conta ainda não está vinculada ao Gateway Lera Box'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Verifique seu e-mail <strong>{meUser?.email}</strong>: o processador enviou um
-                  link de ativação e a senha de acesso. Informe-os para liberar saldo, cobranças
-                  Pix, cartão e saques.
+                  {isGatewayTokenExpired
+                    ? 'A sessão do gateway expirou ou foi rejeitada. Informe novamente a senha enviada pelo Lera Box para restabelecer o acesso.'
+                    : `Verifique seu e-mail ${meUser?.email}: o processador enviou um link de ativação e a senha de acesso. Informe-os para liberar saldo, cobranças Pix, cartão e saques.`}
                 </p>
               </div>
             </div>
@@ -244,7 +266,7 @@ export default function Dashboard(_props: Route.ComponentProps) {
               onClick={() => setLinkOpen(true)}
             >
               <ShieldCheck className="size-4" />
-              <span>Vincular Gateway agora</span>
+              <span>{isGatewayTokenExpired ? 'Reautenticar Gateway' : 'Vincular Gateway agora'}</span>
             </Button>
             {linkOpen ? (
               <Suspense fallback={null}>
@@ -373,9 +395,7 @@ export default function Dashboard(_props: Route.ComponentProps) {
                       {tx.description || 'Transação BaaS'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="text-[10px]">
-                        {tx.type}
-                      </Badge>
+                      <TransactionTypeBadge type={tx.type} variant="badge" />
                     </TableCell>
                     <TableCell className="hidden text-xs text-muted-foreground sm:table-cell">
                       {formatDate(tx.createdAt)}

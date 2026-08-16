@@ -21,16 +21,16 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
-    summary: 'Register a new BaaS merchant account and trigger Lera Box Gateway user creation',
+    summary: 'Cadastra uma nova conta de lojista no BaaS e solicita a criação no gateway Lera Box',
   })
   @ApiResponse({
     status: HttpStatus.CREATED,
-    description: 'User registered successfully',
+    description: 'Usuário cadastrado com sucesso',
     type: AuthResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
-    description: 'Email or document already exists',
+    description: 'E-mail ou documento (CPF/CNPJ) já cadastrado',
   })
   public async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
     return this.authService.register(dto);
@@ -40,16 +40,16 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Authenticate BaaS merchant using email/document and password (optionally passes gateway password to renew token)',
+      'Autentica lojista no BaaS via e-mail/documento e senha (opcionalmente recebe a senha do gateway para renovar o token)',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Authentication successful',
+    description: 'Autenticação realizada com sucesso',
     type: AuthResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid credentials',
+    description: 'Credenciais inválidas',
   })
   public async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
@@ -58,11 +58,11 @@ export class AuthController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Request password reset for merchant account on Lera Box Gateway',
+    summary: 'Solicita a redefinição de senha da conta do lojista no gateway Lera Box',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Password reset request processed',
+    description: 'Solicitação de redefinição de senha processada com sucesso',
   })
   public async resetPassword(
     @Body() dto: ResetPasswordDto,
@@ -75,16 +75,17 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Securely link Lera Box Gateway credentials to the authenticated BaaS account',
+    summary:
+      'Vincula de forma segura as credenciais do gateway Lera Box à conta autenticada no BaaS',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Gateway account linked successfully',
+    description: 'Conta do gateway vinculada com sucesso',
     type: UserProfileDto,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid gateway credentials or session expired',
+    description: 'Credenciais do gateway inválidas ou sessão expirada',
   })
   public async linkGateway(
     @CurrentUser('id') userId: string,
@@ -97,11 +98,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get profile of current authenticated BaaS user and gateway link status',
+    summary: 'Retorna o perfil do usuário autenticado no BaaS e o status do vínculo com o gateway',
   })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Current user profile',
+    description: 'Perfil do usuário atual',
     type: UserProfileDto,
   })
   public async getMe(@CurrentUser() user: User): Promise<UserProfileDto> {

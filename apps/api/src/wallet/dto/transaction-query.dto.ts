@@ -5,7 +5,7 @@ import { IsEnum, IsInt, IsOptional, IsPositive } from 'class-validator';
 export class TransactionQueryDto {
   @ApiPropertyOptional({
     enum: ['APPROVED', 'DENIED', 'PENDING', 'EXPIRED', 'CANCELLED'],
-    description: 'Filter by transaction status',
+    description: 'Filtra pelo status da transação',
   })
   @IsOptional()
   @IsEnum(['APPROVED', 'DENIED', 'PENDING', 'EXPIRED', 'CANCELLED'])
@@ -13,13 +13,16 @@ export class TransactionQueryDto {
 
   @ApiPropertyOptional({
     enum: ['PIX', 'CREDIT_CARD', 'WITHDRAWAL'],
-    description: 'Filter by transaction type',
+    description: 'Filtra pelo tipo de transação',
   })
   @IsOptional()
   @IsEnum(['PIX', 'CREDIT_CARD', 'WITHDRAWAL'])
   type?: string;
 
-  @ApiPropertyOptional({ example: 50, description: 'Limit number of transactions returned' })
+  @ApiPropertyOptional({
+    example: 50,
+    description: 'Limite de transações a serem retornadas',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

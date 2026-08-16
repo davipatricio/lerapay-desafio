@@ -43,15 +43,64 @@ export const WITHDRAWAL_STATUS: Record<string, StatusMeta> = {
 /** Payment method / transaction type metadata. */
 export interface TransactionTypeMeta {
   label: string;
+  shortLabel?: string;
   code: string;
+  description?: string;
 }
 
 export const TRANSACTION_TYPES: Record<string, TransactionTypeMeta> = {
-  PIX: { label: 'Pix', code: 'PIX' },
-  CARD: { label: 'Cartão', code: 'CREDIT_CARD' },
-  CREDIT_CARD: { label: 'Cartão', code: 'CREDIT_CARD' },
-  WITHDRAWAL: { label: 'Saque', code: 'WITHDRAWAL' },
+  PIX: {
+    label: 'Pix',
+    shortLabel: 'Pix',
+    code: 'PIX',
+    description: 'Pagamento instantâneo via Pix',
+  },
+  PAYMENT_PIX: {
+    label: 'Pagamento Pix',
+    shortLabel: 'Pix',
+    code: 'PIX',
+    description: 'Pagamento instantâneo via Pix',
+  },
+  CARD: {
+    label: 'Cartão de Crédito',
+    shortLabel: 'Cartão',
+    code: 'CREDIT_CARD',
+    description: 'Pagamento via Cartão de Crédito',
+  },
+  CREDIT_CARD: {
+    label: 'Cartão de Crédito',
+    shortLabel: 'Cartão',
+    code: 'CREDIT_CARD',
+    description: 'Pagamento via Cartão de Crédito',
+  },
+  PAYMENT_CARD: {
+    label: 'Pagamento no Cartão',
+    shortLabel: 'Cartão',
+    code: 'CREDIT_CARD',
+    description: 'Pagamento via Cartão de Crédito',
+  },
+  WITHDRAWAL: {
+    label: 'Saque Pix',
+    shortLabel: 'Saque',
+    code: 'WITHDRAWAL',
+    description: 'Transferência de saque para conta externa via Pix',
+  },
 };
+
+/** Friendly labels for webhook events */
+export const WEBHOOK_EVENT_LABELS: Record<string, string> = {
+  PAYMENT_PIX: 'Pagamento Pix',
+  PAYMENT_CARD: 'Pagamento no Cartão',
+  WITHDRAWAL: 'Saque / Transferência',
+};
+
+/**
+ * Resolves a webhook event key to a human-friendly label.
+ */
+export function getWebhookEventLabel(event?: string | null): string {
+  if (!event) return '—';
+  return WEBHOOK_EVENT_LABELS[event] ?? humanize(event);
+}
 
 /**
  * Resolves a raw transaction type string to a display label.
@@ -59,6 +108,13 @@ export const TRANSACTION_TYPES: Record<string, TransactionTypeMeta> = {
 export function getTransactionTypeMeta(type?: string | null): TransactionTypeMeta {
   if (!type) return { label: '—', code: 'UNKNOWN' };
   return TRANSACTION_TYPES[type] ?? { label: humanize(type), code: type };
+}
+
+/**
+ * Convenience helper to get just the friendly label of a transaction type.
+ */
+export function getTransactionTypeLabel(type?: string | null): string {
+  return getTransactionTypeMeta(type).label;
 }
 
 /** Aggregated map across all domains; unknown statuses fall back to neutral. */

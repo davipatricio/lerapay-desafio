@@ -22,31 +22,31 @@ export class JwtAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid Authorization header');
+      throw new UnauthorizedException('Cabeçalho de autorização ausente ou inválido');
     }
 
     const token = authHeader.split(' ')[1];
     if (!token) {
-      throw new UnauthorizedException('Token not provided');
+      throw new UnauthorizedException('Token de autenticação não fornecido');
     }
 
-    // Only token verification failures map to 401; user lookup errors surface as their natural 500s.
+    // Apenas falhas na verificação do token mapeiam para 401; erros de consulta ao banco propagam como 500.
     let payload: { sub: string; email: string };
     try {
       payload = await this.jwtService.verifyAsync<{ sub: string; email: string }>(token);
     } catch {
-      throw new UnauthorizedException('Invalid or expired authentication token');
+      throw new UnauthorizedException('Token de autenticação inválido ou expirado');
     }
 
     const user = await this.usersService.findById(payload.sub);
     if (!user) {
-      throw new UnauthorizedException('User not found or session expired');
+      throw new UnauthorizedException('Usuário não encontrado ou sessão expirada');
     }
 
-    // Attach typed user to Express request
+    // Anexa usuário tipado à requisição Express
     request.user = user;
 
-    // Populate RequestContext for ambient service access
+    // Preenche RequestContext para acesso de serviços em contexto
     this.requestContextService.setUserId(user.id);
     if (user.gatewayAccount?.merchantToken) {
       this.requestContextService.setToken(user.gatewayAccount.merchantToken);

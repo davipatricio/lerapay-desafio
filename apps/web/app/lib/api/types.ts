@@ -208,6 +208,15 @@ export interface CheckoutLinkDto {
   createdAt: string;
 }
 
+export interface CheckoutPaymentStatusDto {
+  orderId: string;
+  externalReference: string;
+  amount: number;
+  method: 'PIX' | 'CREDIT_CARD';
+  status: string;
+  expiresAt?: string;
+}
+
 export interface WithdrawalRequest {
   amount: number;
   pixKey: string;
@@ -222,17 +231,17 @@ export interface WithdrawalDto {
   createdAt: string;
 }
 
+export type WebhookEvent = 'PAYMENT_PIX' | 'PAYMENT_CARD' | 'WITHDRAWAL';
+
 export interface WebhookDto {
   id: string;
+  event: WebhookEvent;
   url: string;
-  events: string[];
-  active: boolean;
   secret?: string;
   createdAt: string;
 }
 
 export interface UpsertWebhookRequest {
   url: string;
-  events: string[];
-  active?: boolean;
+  event: WebhookEvent;
 }

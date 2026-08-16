@@ -7,7 +7,7 @@ import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 import { Withdrawal } from './entities/withdrawal.entity';
 import { WithdrawalsService } from './withdrawals.service';
 
-@ApiTags('withdrawals')
+@ApiTags('saques')
 @Controller('withdrawals')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -16,9 +16,9 @@ export class WithdrawalsController {
 
   @Post()
   @ApiOperation({
-    summary: 'Request a withdrawal / payout to a Pix key via Lera Box Gateway',
+    summary: 'Solicita um saque / transferência para chave Pix via gateway Lera Box',
   })
-  @ApiResponse({ status: 201, description: 'Withdrawal created', type: Withdrawal })
+  @ApiResponse({ status: 201, description: 'Saque solicitado com sucesso', type: Withdrawal })
   public async create(
     @CurrentUser() user: User,
     @Body() dto: CreateWithdrawalDto,
@@ -27,17 +27,17 @@ export class WithdrawalsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all withdrawals for authenticated merchant' })
-  @ApiResponse({ status: 200, description: 'List of withdrawals', type: [Withdrawal] })
+  @ApiOperation({ summary: 'Lista todos os saques do lojista autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de saques cadastrados', type: [Withdrawal] })
   public async findAll(@CurrentUser('id') userId: string): Promise<Withdrawal[]> {
     return this.withdrawalsService.findAllByUser(userId);
   }
 
   @Get(':id')
   @ApiOperation({
-    summary: 'Retrieve withdrawal status by ID from local database and Lera Box Gateway',
+    summary: 'Consulta os detalhes e o status atualizado do saque por ID',
   })
-  @ApiResponse({ status: 200, description: 'Withdrawal details', type: Withdrawal })
+  @ApiResponse({ status: 200, description: 'Detalhes do saque', type: Withdrawal })
   public async findOne(@CurrentUser() user: User, @Param('id') id: string): Promise<Withdrawal> {
     return this.withdrawalsService.findById(id, user);
   }

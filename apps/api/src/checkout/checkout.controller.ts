@@ -6,7 +6,7 @@ import { CheckoutService } from './checkout.service';
 import { CreateCheckoutLinkDto } from './dto/create-checkout-link.dto';
 import { CheckoutLink } from './entities/checkout-link.entity';
 
-@ApiTags('checkout-links')
+@ApiTags('links-de-checkout')
 @Controller('checkout-links')
 export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
@@ -14,10 +14,12 @@ export class CheckoutController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new checkout link for Pix/Credit Card payments' })
+  @ApiOperation({
+    summary: 'Cria um novo link de checkout para pagamentos via Pix ou Cartão de Crédito',
+  })
   @ApiResponse({
     status: 201,
-    description: 'Checkout link created successfully',
+    description: 'Link de checkout criado com sucesso',
     type: CheckoutLink,
   })
   public async create(
@@ -30,15 +32,15 @@ export class CheckoutController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'List all checkout links created by authenticated merchant' })
-  @ApiResponse({ status: 200, description: 'List of checkout links', type: [CheckoutLink] })
+  @ApiOperation({ summary: 'Lista todos os links de checkout criados pelo lojista autenticado' })
+  @ApiResponse({ status: 200, description: 'Lista de links de checkout', type: [CheckoutLink] })
   public async findAll(@CurrentUser('id') userId: string): Promise<CheckoutLink[]> {
     return this.checkoutService.findAllByUser(userId);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get checkout link details by ID (Public for payers)' })
-  @ApiResponse({ status: 200, description: 'Checkout link details', type: CheckoutLink })
+  @ApiOperation({ summary: 'Obtém detalhes do link de checkout por ID (Público para pagadores)' })
+  @ApiResponse({ status: 200, description: 'Detalhes do link de checkout', type: CheckoutLink })
   public async findOne(@Param('id') id: string): Promise<CheckoutLink> {
     return this.checkoutService.findById(id);
   }

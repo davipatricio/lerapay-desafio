@@ -30,9 +30,9 @@ export class WebhooksController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Register or update a webhook subscription directly on Lera Box Gateway',
+    summary: 'Cadastra ou atualiza uma subscrição de webhook diretamente no gateway Lera Box',
   })
-  @ApiResponse({ status: 201, description: 'Webhook registered' })
+  @ApiResponse({ status: 201, description: 'Webhook cadastrado com sucesso' })
   public async upsertWebhook(@CurrentUser() user: User, @Body() dto: CreateWebhookDto) {
     return this.webhooksService.upsertWebhook(user, dto);
   }
@@ -40,8 +40,10 @@ export class WebhooksController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'List all webhooks registered on Lera Box Gateway for this merchant' })
-  @ApiResponse({ status: 200, description: 'List of webhooks' })
+  @ApiOperation({
+    summary: 'Lista todos os webhooks cadastrados no gateway Lera Box para este lojista',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de webhooks cadastrados' })
   public async listWebhooks(@CurrentUser() user: User) {
     return this.webhooksService.listWebhooks(user);
   }
@@ -49,8 +51,8 @@ export class WebhooksController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete a webhook subscription on Lera Box Gateway' })
-  @ApiResponse({ status: 200, description: 'Webhook deleted' })
+  @ApiOperation({ summary: 'Remove uma subscrição de webhook no gateway Lera Box' })
+  @ApiResponse({ status: 200, description: 'Webhook removido com sucesso' })
   public async deleteWebhook(@CurrentUser() user: User, @Param('id') id: string) {
     return this.webhooksService.deleteWebhook(id, user);
   }
@@ -59,18 +61,18 @@ export class WebhooksController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Inbound receiver for asynchronous webhook events emitted by Lera Box Gateway (Pix, Card, Withdrawal)',
+      'Receptor de eventos assíncronos de webhook emitidos pelo gateway Lera Box (Pix, Cartão, Saque)',
   })
   @ApiHeader({
     name: 'x-lera-box-signature',
     required: false,
     description:
-      'HMAC SHA-256 signature generated with the webhook secret (required when GATEWAY_WEBHOOK_SECRET is configured)',
+      'Assinatura HMAC SHA-256 gerada com o segredo do webhook (obrigatória quando GATEWAY_WEBHOOK_SECRET estiver configurado)',
   })
-  @ApiResponse({ status: 200, description: 'Webhook event processed and acknowledged' })
+  @ApiResponse({ status: 200, description: 'Evento de webhook processado e confirmado' })
   @ApiResponse({
     status: 400,
-    description: 'Invalid or missing signature / malformed payload',
+    description: 'Assinatura inválida/ausente ou carga útil malformatada',
   })
   public async handleGatewayWebhook(
     @Req() req: RawBodyRequest<Request>,

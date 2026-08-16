@@ -20,17 +20,10 @@ import {
 } from '@/components/ui/select';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
+import { TransactionTypeBadge } from '@/components/dashboard/transaction-type-badge';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { formatDateTime, formatReference } from '@/lib/dashboard';
-import {
-  Receipt,
-  Search,
-  RefreshCw,
-  QrCode,
-  CreditCard,
-  ArrowUpRight,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { Receipt, Search, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { walletTransactionsQueryOptions } from '../../lib/queries';
 import { useDashboardQuery } from '../../lib/query/options';
 import { formatBRL } from '../../lib/money';
@@ -56,8 +49,8 @@ const statusItems = [
 const typeItems = [
   { value: 'ALL', label: 'Todos os tipos' },
   { value: 'PIX', label: 'Pix' },
-  { value: 'CREDIT_CARD', label: 'Cartão' },
-  { value: 'WITHDRAWAL', label: 'Saque' },
+  { value: 'CREDIT_CARD', label: 'Cartão de Crédito' },
+  { value: 'WITHDRAWAL', label: 'Saque Pix' },
 ];
 
 export default function TransactionsPage(_props: Route.ComponentProps) {
@@ -224,16 +217,7 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
                       {formatDateTime(tx.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        {tx.type === 'PIX' && <QrCode className="size-3.5 text-emerald-500" />}
-                        {tx.type === 'CREDIT_CARD' && (
-                          <CreditCard className="size-3.5 text-sky-500" />
-                        )}
-                        {tx.type === 'WITHDRAWAL' && (
-                          <ArrowUpRight className="size-3.5 text-amber-500" />
-                        )}
-                        <span className="text-xs font-medium">{tx.type}</span>
-                      </div>
+                      <TransactionTypeBadge type={tx.type} />
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">
                       {formatReference(tx.externalReference || tx.id)}

@@ -7,7 +7,7 @@ import { User } from '../users/entities/user.entity';
 import { TransactionQueryDto } from './dto/transaction-query.dto';
 import { WalletService } from './wallet.service';
 
-@ApiTags('wallet')
+@ApiTags('carteira')
 @Controller('wallet')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -16,9 +16,10 @@ export class WalletController {
 
   @Get()
   @ApiOperation({
-    summary: 'Retrieve live wallet balance and transaction summary from Lera Box Gateway',
+    summary:
+      'Consulta o saldo em tempo real da carteira e o resumo de transações no gateway Lera Box',
   })
-  @ApiResponse({ status: 200, description: 'Wallet balance and summary' })
+  @ApiResponse({ status: 200, description: 'Saldo da carteira e resumo financeiro' })
   public async getWallet(@CurrentUser() user: User): Promise<WalletResponse> {
     return this.walletService.getWallet(user);
   }
@@ -26,9 +27,9 @@ export class WalletController {
   @Get('transactions')
   @ApiOperation({
     summary:
-      'List live wallet transactions with status and type filters directly from Lera Box Gateway',
+      'Lista transações em tempo real da carteira com filtros por status e tipo diretamente no gateway Lera Box',
   })
-  @ApiResponse({ status: 200, description: 'List of transactions' })
+  @ApiResponse({ status: 200, description: 'Lista de transações da carteira' })
   public async listTransactions(
     @CurrentUser() user: User,
     @Query() filters: TransactionQueryDto,

@@ -21,26 +21,28 @@ export class WithdrawalsService {
     const token = user.gatewayAccount?.merchantToken;
     if (!token) {
       throw new BadRequestException(
-        'Lera Box Gateway account is not linked. Please link your gateway account before requesting withdrawals.',
+        'A conta do gateway Lera Box não está vinculada. Vincule sua conta do gateway antes de solicitar saques.',
       );
     }
 
     const document = (dto.document || user.document).replace(/\D/g, '');
     const externalReference = `WTH-${Date.now()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
-    // Execute withdrawal request on Lera Box Gateway
-    const gatewayRes = await this.gatewayService.createWithdrawal(
-      {
-        amount: dto.amount,
-        pixKey: dto.pixKey.trim(),
-        document,
-        description: dto.description || 'Saque via Pix',
-        externalReference,
-      },
-      token,
+    // Executa a solicitação de saque diretamente no gateway Lera Box
+    const gatewayRes = await this.gatewayService.withMerchantToken(user, (validToken) =>
+      this.gatewayService.createWithdrawal(
+        {
+          amount: dto.amount,
+          pixKey: dto.pixKey.trim(),
+          document,
+          description: dto.description || 'Saque via Pix',
+          externalReference,
+        },
+        validToken,
+      ),
     );
 
-    // Save local Withdrawal record
+    // Registra a entidade local de Saque para controle e auditoria
     const withdrawal = this.withdrawalRepository.create({
       userId: user.id,
       gatewayWithdrawalId: gatewayRes.withdrawalId || null,
@@ -53,7 +55,7 @@ export class WithdrawalsService {
     });
     await this.withdrawalRepository.save(withdrawal);
 
-    // Save mirror Transaction
+    // Cria a transação espelhada para reconciliação contábil do extrato
     const transaction = this.transactionRepository.create({
       userId: user.id,
       gatewayTransactionId: gatewayRes.withdrawalId || null,
@@ -79,10 +81,10 @@ export class WithdrawalsService {
     });
 
     if (!withdrawal) {
-      throw new NotFoundException(`Withdrawal ${id} not found`);
+      throw new NotFoundException(`Saque ${id} não encontrado`);
     }
 
-    // Refresh live status from gateway if token and gatewayWithdrawalId are present
+    // Atualiza o status em tempo real via gateway com fallback seguro para o estado local persistido caso a chamada falhe
     const token = user.gatewayAccount?.merchantToken;
     if (withdrawal.gatewayWithdrawalId && token) {
       try {
@@ -95,7 +97,7 @@ export class WithdrawalsService {
           await this.withdrawalRepository.save(withdrawal);
         }
       } catch {
-        // Fall back to current status if gateway lookup fails
+        // Mantém o status local previamente gravado caso a consulta ao gateway falhe
       }
     }
 

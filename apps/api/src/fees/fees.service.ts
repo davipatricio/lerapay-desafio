@@ -27,14 +27,14 @@ export class FeesService {
 
     if (!feeItem) {
       throw new BadRequestException(
-        `Installment ${installments}x is not supported for brand ${brand}`,
+        `Parcelamento em ${installments}x não é suportado para a bandeira ${brand}`,
       );
     }
 
-    // Allow floating point comparison with a small epsilon
+    // O epsilon na comparação existe unicamente devido à representação de ponto flutuante, não para tolerância de taxa.
     if (Math.abs(Number(feeItem.feePercent) - Number(feePercent)) > 0.01) {
       throw new BadRequestException(
-        `Invalid feePercent ${feePercent}%. Expected ${feeItem.feePercent}% for ${brand} ${installments}x per gateway fee table.`,
+        `Taxa inválida (${feePercent}%). O esperado é ${feeItem.feePercent}% para ${brand} em ${installments}x conforme a tabela de taxas do gateway.`,
       );
     }
 

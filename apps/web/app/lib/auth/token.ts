@@ -48,6 +48,29 @@ export function getSessionUser(): UserDto | null {
 /**
  * Clears the stored access token and user profile (logout).
  */
+export function markGatewayPending(): void {
+  if (!hasWindow()) return;
+
+  const user = getSessionUser();
+  if (user?.gatewayAccount) {
+    setSessionUser({
+      ...user,
+      gatewayAccount: {
+        ...user.gatewayAccount,
+        isLinked: false,
+        tokenExpiresAt: null,
+      },
+    });
+  }
+
+  window.dispatchEvent(new CustomEvent('lerapay:gateway-pending'));
+}
+
+export function markGatewayLinked(): void {
+  if (!hasWindow()) return;
+  window.dispatchEvent(new CustomEvent('lerapay:gateway-linked'));
+}
+
 export function clearSession(): void {
   if (!hasWindow()) return;
   window.localStorage.removeItem(TOKEN_KEY);

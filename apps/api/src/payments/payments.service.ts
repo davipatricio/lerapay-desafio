@@ -30,14 +30,18 @@ export class PaymentsService {
     const context = await this.resolvePaymentContext(dto, 'PIX', authenticatedUserId);
     const payerDocument = dto.payerDocument.replace(/\D/g, '');
 
-    const gatewayRes = await this.gatewayService.createPixPayment(
-      {
-        amount: context.amount,
-        description: dto.description || context.checkoutLink?.title || 'Pix Payment',
-        payerDocument,
-        externalReference: context.externalReference,
-      },
-      context.merchantToken,
+    const gatewayRes = await this.gatewayService.withMerchantTokenByUserId(
+      context.userId,
+      (token) =>
+        this.gatewayService.createPixPayment(
+          {
+            amount: context.amount,
+            description: dto.description || context.checkoutLink?.title || 'Pagamento Pix',
+            payerDocument,
+            externalReference: context.externalReference,
+          },
+          token,
+        ),
     );
 
     const order = this.orderRepository.create({
@@ -68,7 +72,7 @@ export class PaymentsService {
       amount: context.amount,
       fee: 0,
       netAmount: context.amount,
-      description: dto.description || context.checkoutLink?.title || 'Pix Payment',
+      description: dto.description || context.checkoutLink?.title || 'Pagamento Pix',
     });
     await this.transactionRepository.save(transaction);
 
@@ -90,19 +94,24 @@ export class PaymentsService {
 
     await this.feesService.validateFee(dto.brand, dto.installments, dto.feePercent);
 
-    const gatewayRes = await this.gatewayService.createCardPayment(
-      {
-        amount: context.amount,
-        description: dto.description || context.checkoutLink?.title || 'Credit Card Payment',
-        cardNumber: dto.cardNumber.replace(/\D/g, ''),
-        cardHolder: dto.cardHolder.trim().toUpperCase(),
-        expiryMonth: dto.expiryMonth.padStart(2, '0'),
-        expiryYear: dto.expiryYear.length === 2 ? `20${dto.expiryYear}` : dto.expiryYear,
-        cvv: dto.cvv.trim(),
-        installments: dto.installments,
-        feePercent: dto.feePercent,
-      },
-      context.merchantToken,
+    const gatewayRes = await this.gatewayService.withMerchantTokenByUserId(
+      context.userId,
+      (token) =>
+        this.gatewayService.createCardPayment(
+          {
+            amount: context.amount,
+            description:
+              dto.description || context.checkoutLink?.title || 'Pagamento com Cartão de Crédito',
+            cardNumber: dto.cardNumber.replace(/\D/g, ''),
+            cardHolder: dto.cardHolder.trim().toUpperCase(),
+            expiryMonth: dto.expiryMonth.padStart(2, '0'),
+            expiryYear: dto.expiryYear.length === 2 ? `20${dto.expiryYear}` : dto.expiryYear,
+            cvv: dto.cvv.trim(),
+            installments: dto.installments,
+            feePercent: dto.feePercent,
+          },
+          token,
+        ),
     );
 
     const status = gatewayRes.success ? 'APPROVED' : 'DENIED';
@@ -135,7 +144,8 @@ export class PaymentsService {
       amount: context.amount,
       fee: order.feeAmount,
       netAmount: order.netAmount,
-      description: dto.description || context.checkoutLink?.title || 'Credit Card Payment',
+      description:
+        dto.description || context.checkoutLink?.title || 'Pagamento com Cartão de Crédito',
     });
     await this.transactionRepository.save(transaction);
 
@@ -157,6 +167,8 @@ export class PaymentsService {
   }
 
   public async getMerchantPayment(id: string, userId: string): Promise<Order> {
+    // Todas as alternativas de busca são delimitadas pelo lojista autenticado,
+    // impedindo que um identificador revele pagamentos de outra conta.
     const order = await this.orderRepository.findOne({
       where: [
         { id, userId },
@@ -168,7 +180,7 @@ export class PaymentsService {
     });
 
     if (!order) {
-      throw new NotFoundException(`Payment with ID/reference ${id} not found`);
+      throw new NotFoundException(`Pagamento com ID/referência ${id} não encontrado`);
     }
 
     await this.refreshOrderStatus(order);
@@ -181,7 +193,7 @@ export class PaymentsService {
     });
 
     if (!order) {
-      throw new NotFoundException('Payment not found for this checkout link');
+      throw new NotFoundException('Pagamento não encontrado para este link de checkout');
     }
 
     await this.refreshOrderStatus(order);
@@ -215,21 +227,23 @@ export class PaymentsService {
       await this.validateCheckoutLink(checkoutLink, dto, method);
 
       if (authenticatedUserId && authenticatedUserId !== checkoutLink.userId) {
-        throw new NotFoundException('Checkout link not found');
+        throw new NotFoundException('Link de checkout não encontrado');
       }
 
       userId = checkoutLink.userId;
     }
 
     if (!userId) {
-      throw new BadRequestException('A valid checkoutLinkId is required for public payments');
+      throw new BadRequestException(
+        'Um checkoutLinkId válido é obrigatório para pagamentos públicos',
+      );
     }
 
     const merchant = await this.usersService.findById(userId);
     const merchantToken = merchant?.gatewayAccount?.merchantToken;
     if (!merchantToken) {
       throw new BadRequestException(
-        'Merchant has not linked their Lera Box Gateway account. Please link gateway credentials before accepting payments.',
+        'O lojista não vinculou sua conta do gateway Lera Box. Vincule as credenciais do gateway antes de aceitar pagamentos.',
       );
     }
 
@@ -252,21 +266,25 @@ export class PaymentsService {
     dto: CreatePixPaymentDto | CreateCardPaymentDto,
     method: PaymentMethod,
   ): Promise<void> {
+    // O link persistido é a fonte autoritativa do pagamento público: o payload
+    // não pode sobrescrever valor, referência, método, status, prazo ou parcelas.
     if (checkoutLink.status !== 'ACTIVE') {
-      throw new BadRequestException('This checkout link is no longer active');
+      throw new BadRequestException('Este link de checkout não está mais ativo');
     }
 
     if (checkoutLink.expiresAt && checkoutLink.expiresAt.getTime() <= Date.now()) {
       await this.checkoutService.updateStatus(checkoutLink.id, 'EXPIRED');
-      throw new BadRequestException('This checkout link has expired');
+      throw new BadRequestException('Este link de checkout expirou');
     }
 
     if (!checkoutLink.allowedMethods.includes(method)) {
-      throw new BadRequestException(`This checkout link does not allow ${method} payments`);
+      throw new BadRequestException(`Este link de checkout não permite pagamentos via ${method}`);
     }
 
     if (dto.amount !== checkoutLink.amount) {
-      throw new BadRequestException('Payment amount must match the checkout link amount');
+      throw new BadRequestException(
+        'O valor do pagamento deve corresponder ao valor do link de checkout',
+      );
     }
 
     if (
@@ -274,7 +292,7 @@ export class PaymentsService {
       dto.externalReference.trim() !== checkoutLink.externalReference
     ) {
       throw new BadRequestException(
-        'Payment external reference must match the checkout link reference',
+        'A referência externa do pagamento deve corresponder à do link de checkout',
       );
     }
 
@@ -284,7 +302,7 @@ export class PaymentsService {
       dto.installments > checkoutLink.maxInstallments
     ) {
       throw new BadRequestException(
-        `This checkout link allows at most ${checkoutLink.maxInstallments} installments`,
+        `Este link de checkout permite no máximo ${checkoutLink.maxInstallments} parcelas`,
       );
     }
   }
@@ -307,7 +325,7 @@ export class PaymentsService {
         await this.orderRepository.save(order);
       }
     } catch {
-      // Return the last locally reconciled status when gateway availability is degraded.
+      // Em indisponibilidade do gateway, preserva o último status já conciliado localmente.
     }
   }
 }

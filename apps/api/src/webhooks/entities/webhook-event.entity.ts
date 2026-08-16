@@ -1,5 +1,9 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
+/**
+ * Entidade de registro e auditoria de eventos assíncronos de webhook recebidos do gateway.
+ * O campo eventId único garante idempotência contra retentativas de entrega.
+ */
 @Entity('webhook_events')
 export class WebhookEvent {
   @PrimaryGeneratedColumn('uuid')

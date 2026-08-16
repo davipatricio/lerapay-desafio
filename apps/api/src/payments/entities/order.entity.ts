@@ -36,7 +36,7 @@ export class Order {
   @Index()
   externalReference: string;
 
-  @Column({ type: 'int', comment: 'Amount in centavos' })
+  @Column({ type: 'int', comment: 'Valor em centavos' })
   amount: number;
 
   @Column({ type: 'enum', enum: ['PIX', 'CREDIT_CARD'] })
@@ -59,10 +59,10 @@ export class Order {
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0, name: 'fee_percent' })
   feePercent: number;
 
-  @Column({ type: 'int', default: 0, name: 'fee_amount', comment: 'Fee in centavos' })
+  @Column({ type: 'int', default: 0, name: 'fee_amount', comment: 'Valor da taxa em centavos' })
   feeAmount: number;
 
-  @Column({ type: 'int', default: 0, name: 'net_amount', comment: 'Net in centavos' })
+  @Column({ type: 'int', default: 0, name: 'net_amount', comment: 'Valor líquido em centavos' })
   netAmount: number;
 
   @Column({ type: 'text', nullable: true, name: 'qr_code' })

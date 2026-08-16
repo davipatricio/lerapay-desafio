@@ -4,14 +4,14 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator
 export class CreateWebhookDto {
   @ApiProperty({
     enum: ['PAYMENT_PIX', 'PAYMENT_CARD', 'WITHDRAWAL'],
-    description: 'Event type to listen for',
+    description: 'Tipo de evento a ser monitorado',
   })
   @IsEnum(['PAYMENT_PIX', 'PAYMENT_CARD', 'WITHDRAWAL'])
   event: 'PAYMENT_PIX' | 'PAYMENT_CARD' | 'WITHDRAWAL';
 
   @ApiProperty({
     example: 'https://meudominio.com.br/api/webhooks/gateway',
-    description: 'Callback destination URL',
+    description: 'URL de destino para o callback',
   })
   @IsUrl()
   @IsNotEmpty()
@@ -19,7 +19,7 @@ export class CreateWebhookDto {
 
   @ApiPropertyOptional({
     example: 'segredo-hmac-123',
-    description: 'Optional secret for HMAC SHA-256 signature verification',
+    description: 'Segredo opcional para verificação de assinatura HMAC SHA-256',
   })
   @IsOptional()
   @IsString()

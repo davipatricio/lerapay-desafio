@@ -10,6 +10,8 @@ export class CorrelationIdMiddleware implements NestMiddleware {
   constructor(private readonly requestContextService: RequestContextService) {}
 
   use(req: Request, res: Response, next: NextFunction): void {
+    // Aceita os aliases mais comuns, devolve o mesmo identificador na resposta
+    // e o propaga pelo contexto para correlacionar logs de ponta a ponta.
     const rawHeader =
       req.headers[CORRELATION_ID_HEADER] ||
       req.headers['x-request-id'] ||

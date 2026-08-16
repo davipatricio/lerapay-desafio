@@ -36,6 +36,36 @@ export class ApiClientError extends Error {
   }
 }
 
+export function isApiClientError(
+  error: unknown,
+  options: { statusCode?: number; code?: string; path?: string } = {},
+): error is ApiClientError {
+  if (!(error instanceof ApiClientError)) return false;
+  if (options.statusCode !== undefined && error.statusCode !== options.statusCode) return false;
+  if (options.code !== undefined && error.code !== options.code) return false;
+  if (options.path !== undefined && error.path !== options.path) return false;
+  return true;
+}
+
+export function isGatewayReauthError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) return false;
+  if (error.code === 'GATEWAY_REAUTH_REQUIRED') return true;
+
+  const message = error.message.toLowerCase();
+  return (
+    error.statusCode === 401 &&
+    message.includes('token') &&
+    (message.includes('inválido') || message.includes('expirado')) &&
+    !message.includes('autenticação')
+  );
+}
+
+export function isLocalSessionExpiredError(error: unknown): boolean {
+  if (!(error instanceof ApiClientError)) return false;
+  if (isGatewayReauthError(error)) return false;
+  return error.statusCode === 401;
+}
+
 /**
  * Normalizes any caught error (ofetch FetchError, Error, or API JSON response) into an ApiClientError.
  */

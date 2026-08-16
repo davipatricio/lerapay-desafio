@@ -23,8 +23,17 @@ import {
   type WithdrawalDetailsResponse,
   verifyWebhookSignature,
 } from '@lerapay/gateway-sdk';
-import { Injectable, Optional } from '@nestjs/common';
+import { Injectable, Optional, BadGatewayException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { GatewayAccount } from '../auth/entities/gateway-account.entity';
+import type { User } from '../users/entities/user.entity';
+import {
+  GATEWAY_REAUTH_MESSAGE,
+  GATEWAY_REAUTH_REQUIRED,
+  isGatewayTokenRejection,
+} from './gateway-auth.error';
 import { DEFAULT_GATEWAY_BASE_URL, DEFAULT_GATEWAY_TIMEOUT } from './gateway.constants';
 
 @Injectable()
@@ -33,7 +42,11 @@ export class GatewayService {
   private readonly baseUrl: string;
   private readonly timeout: number;
 
-  constructor(@Optional() private readonly configService?: ConfigService) {
+  constructor(
+    @InjectRepository(GatewayAccount)
+    private readonly gatewayAccountRepository: Repository<GatewayAccount>,
+    @Optional() private readonly configService?: ConfigService,
+  ) {
     this.baseUrl = this.configService?.get<string>('GATEWAY_BASE_URL') ?? DEFAULT_GATEWAY_BASE_URL;
 
     this.timeout = this.configService?.get<number>('GATEWAY_TIMEOUT') ?? DEFAULT_GATEWAY_TIMEOUT;
@@ -48,14 +61,15 @@ export class GatewayService {
   }
 
   /**
-   * Access the underlying default BranchPayClient instance.
+   * Cliente padrão do gateway, usado apenas em rotas públicas do Lera Box.
    */
   public getClient(): BranchPayClient {
     return this.client;
   }
 
   /**
-   * Returns a new BranchPayClient instance scoped with the specified user/bearer token.
+   * Cria um cliente isolado para o token de um lojista específico, garantindo
+   * que uma requisição nunca reutilize a credencial de outro lojista.
    */
   public forToken(token: string): BranchPayClient {
     return new BranchPayClient({
@@ -66,7 +80,7 @@ export class GatewayService {
   }
 
   /**
-   * Helper to verify webhook signatures using HMAC-SHA256.
+   * Confere a assinatura HMAC-SHA256 de um webhook usando o utilitário do SDK.
    */
   public verifyWebhookSignature(
     payload: string | object,
@@ -76,7 +90,59 @@ export class GatewayService {
     return verifyWebhookSignature(payload, signature, secret);
   }
 
-  // --- Base client delegation methods ---
+  public withMerchantToken<T>(
+    user: User,
+    operation: (token: string) => Promise<T>,
+  ): Promise<T> {
+    return this.withMerchantTokenByUserId(user.id, operation);
+  }
+
+  public async withMerchantTokenByUserId<T>(
+    userId: string,
+    operation: (token: string) => Promise<T>,
+  ): Promise<T> {
+    const account = await this.gatewayAccountRepository.findOne({ where: { userId } });
+    if (!account?.isLinked || !account.merchantToken) {
+      throw new BadRequestException({
+        error: {
+          code: 'GATEWAY_LINK_REQUIRED',
+          message: 'A conta do gateway Lera Box não está vinculada.',
+        },
+        message: 'A conta do gateway Lera Box não está vinculada.',
+      });
+    }
+
+    if (account.tokenExpiresAt && account.tokenExpiresAt.getTime() <= Date.now()) {
+      await this.invalidateMerchantToken(userId);
+      throw new BadGatewayException({
+        error: { code: GATEWAY_REAUTH_REQUIRED, message: GATEWAY_REAUTH_MESSAGE },
+        message: GATEWAY_REAUTH_MESSAGE,
+      });
+    }
+
+    try {
+      return await operation(account.merchantToken);
+    } catch (error) {
+      if (!isGatewayTokenRejection(error)) {
+        throw error;
+      }
+
+      await this.invalidateMerchantToken(userId);
+      throw new BadGatewayException({
+        error: { code: GATEWAY_REAUTH_REQUIRED, message: GATEWAY_REAUTH_MESSAGE },
+        message: GATEWAY_REAUTH_MESSAGE,
+      });
+    }
+  }
+
+  private async invalidateMerchantToken(userId: string): Promise<void> {
+    await this.gatewayAccountRepository.update(
+      { userId },
+      { isLinked: false, merchantToken: null, tokenExpiresAt: null },
+    );
+  }
+
+  // --- Delegações diretas ao cliente do gateway ---
 
   public createUser(dto: CreateUserDto): Promise<CreateUserResponse> {
     return this.client.createUser(dto);

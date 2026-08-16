@@ -53,13 +53,13 @@ export class Transaction {
   })
   status: 'PENDING' | 'APPROVED' | 'DENIED' | 'CANCELLED' | 'EXPIRED';
 
-  @Column({ type: 'int', comment: 'Amount in centavos' })
+  @Column({ type: 'int', comment: 'Valor em centavos' })
   amount: number;
 
-  @Column({ type: 'int', default: 0, comment: 'Fee in centavos' })
+  @Column({ type: 'int', default: 0, comment: 'Valor da taxa em centavos' })
   fee: number;
 
-  @Column({ type: 'int', default: 0, name: 'net_amount', comment: 'Net amount in centavos' })
+  @Column({ type: 'int', default: 0, name: 'net_amount', comment: 'Valor líquido em centavos' })
   netAmount: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

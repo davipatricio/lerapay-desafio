@@ -2,7 +2,11 @@ import { queryOptions, useQuery } from '@tanstack/react-query';
 import { defaultApiClient } from '../../api/client';
 import { queryKeys } from '../../query/keys';
 import type { DomainQueryOptions } from '../../query/types';
-import type { CardPaymentResponse, PixPaymentResponse } from '../../api/types';
+import type {
+  CardPaymentResponse,
+  CheckoutPaymentStatusDto,
+  PixPaymentResponse,
+} from '../../api/types';
 
 export function paymentDetailQueryOptions(id: string, options?: DomainQueryOptions) {
   const client = options?.client || defaultApiClient;
@@ -24,12 +28,17 @@ export function publicCheckoutPaymentQueryOptions(
 
   return queryOptions({
     queryKey: [...queryKeys.payments.detail(orderId), 'checkout-link', checkoutLinkId],
-    queryFn: ({ signal }): Promise<PixPaymentResponse | CardPaymentResponse> =>
+    queryFn: ({ signal }): Promise<CheckoutPaymentStatusDto> =>
       client.getPublicCheckoutPayment(checkoutLinkId, orderId, {
         ...options?.requestOptions,
         signal,
       }),
     enabled: Boolean(checkoutLinkId && orderId),
+    staleTime: 0,
+    refetchInterval: (query) =>
+      ['APPROVED', 'DENIED', 'EXPIRED', 'CANCELLED'].includes(query.state.data?.status ?? '')
+        ? false
+        : 3_000,
   });
 }
 

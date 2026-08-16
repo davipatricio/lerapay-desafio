@@ -10,6 +10,10 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
+/**
+ * Entidade de saque (transferência via Pix) solicitada pelo lojista.
+ * Funciona como agregado local de auditoria e reconciliação com o gateway Lera Box.
+ */
 @Entity('withdrawals')
 export class Withdrawal {
   @PrimaryGeneratedColumn('uuid')
@@ -27,7 +31,7 @@ export class Withdrawal {
   @Index()
   gatewayWithdrawalId: string | null;
 
-  @Column({ type: 'int', comment: 'Amount in centavos' })
+  @Column({ type: 'int', comment: 'Valor do saque em centavos' })
   amount: number;
 
   @Column({ type: 'varchar', length: 255, name: 'pix_key' })

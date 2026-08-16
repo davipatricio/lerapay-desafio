@@ -43,7 +43,7 @@ export class CheckoutService {
     });
 
     if (!link) {
-      throw new NotFoundException(`Checkout link with ID ${id} not found`);
+      throw new NotFoundException(`Link de checkout não encontrado para o ID: ${id}`);
     }
 
     return link;

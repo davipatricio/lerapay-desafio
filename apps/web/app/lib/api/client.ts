@@ -19,6 +19,7 @@ import type {
   PixPaymentResponse,
   CardPaymentRequest,
   CardPaymentResponse,
+  CheckoutPaymentStatusDto,
   CheckoutLinkRequest,
   CheckoutLinkDto,
   WithdrawalRequest,
@@ -260,8 +261,8 @@ export class ApiClient {
     checkoutLinkId: string,
     orderId: string,
     options?: ApiRequestOptions,
-  ): Promise<PixPaymentResponse | CardPaymentResponse> {
-    return this.get<PixPaymentResponse | CardPaymentResponse>(
+  ): Promise<CheckoutPaymentStatusDto> {
+    return this.get<CheckoutPaymentStatusDto>(
       `/payments/checkout-links/${checkoutLinkId}/${orderId}`,
       options,
     );

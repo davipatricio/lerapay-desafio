@@ -22,7 +22,7 @@ export class GatewayAccount {
   user: User;
 
   @Column({ name: 'merchant_token', type: 'text', nullable: true })
-  merchantToken?: string;
+  merchantToken?: string | null;
 
   @Column({ name: 'code_client', nullable: true })
   codeClient?: string;
@@ -34,7 +34,7 @@ export class GatewayAccount {
   gatewayDocument?: string;
 
   @Column({ name: 'token_expires_at', type: 'datetime', nullable: true })
-  tokenExpiresAt?: Date;
+  tokenExpiresAt?: Date | null;
 
   @Column({ name: 'is_linked', default: false })
   isLinked: boolean;

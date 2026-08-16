@@ -5,13 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+// Select no longer used - removed
 import {
   Empty,
   EmptyMedia,
@@ -38,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { Webhook, Plus, Trash2, RefreshCw, ShieldCheck, Check, Copy, Activity } from 'lucide-react';
 import { toast } from 'sonner';
+import { getWebhookEventLabel } from '@/lib/dashboard';
 import { webhooksListQueryOptions } from '../../lib/queries';
 import { useDashboardQuery } from '../../lib/query/options';
 import { useUpsertWebhookMutation, useDeleteWebhookMutation } from '../../lib/mutations';
@@ -51,14 +47,9 @@ export function meta(_: Route.MetaArgs) {
 }
 
 const AVAILABLE_EVENTS = [
-  { id: 'PAYMENT_PIX', label: 'Pagamento Pix (Aprovado / Expirado)' },
-  { id: 'PAYMENT_CARD', label: 'Pagamento Cartão de Crédito (Aprovado / Negado)' },
-  { id: 'WITHDRAWAL', label: 'Saques & Transferências (Concluído / Falha)' },
-];
-
-const WEBHOOK_STATUS_ITEMS = [
-  { value: 'active', label: 'Ativo (recebendo notificações)' },
-  { value: 'inactive', label: 'Inativo (suspenso)' },
+  { id: 'PAYMENT_PIX' as const, label: 'Pagamento Pix (Aprovado / Expirado)' },
+  { id: 'PAYMENT_CARD' as const, label: 'Pagamento Cartão de Crédito (Aprovado / Negado)' },
+  { id: 'WITHDRAWAL' as const, label: 'Saques & Transferências (Concluído / Falha)' },
 ];
 
 function MiniStat({ label, value }: { label: string; value: number }) {
@@ -79,15 +70,9 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [url, setUrl] = useState('');
-  const [selectedEvents, setSelectedEvents] = useState<string[]>([
-    'PAYMENT_PIX',
-    'PAYMENT_CARD',
-    'WITHDRAWAL',
-  ]);
-  const [active, setActive] = useState<string>('active');
+  const [selectedEvents, setSelectedEvents] = useState<string[]>(['PAYMENT_PIX']);
+  const [active, setActive] = useState<boolean>(true);
   const [copiedSecret, setCopiedSecret] = useState<string | null>(null);
-
-  const handleStatusChange = (value: string | null) => setActive(value ?? 'active');
 
   const handleToggleEvent = (eventId: string) => {
     setSelectedEvents((prev) =>
@@ -111,14 +96,13 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
     try {
       await upsertMutation.mutateAsync({
         url: url.trim(),
-        events: selectedEvents,
-        active: active === 'active',
+        event: selectedEvents[0] as 'PAYMENT_PIX' | 'PAYMENT_CARD' | 'WITHDRAWAL',
       });
 
       toast.success('Webhook registrado com sucesso no gateway Lera Box!');
       setIsOpen(false);
       setUrl('');
-      setActive('active');
+      setActive(true);
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao registrar webhook');
     }
@@ -142,8 +126,8 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
     setTimeout(() => setCopiedSecret(null), 2000);
   };
 
-  const totalSubscriptions = webhooks.reduce((sum, wh) => sum + (wh.events?.length || 0), 0);
-  const activeCount = webhooks.filter((wh) => wh.active).length;
+  const totalSubscriptions = webhooks.length;
+  const activeCount = webhooks.length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -223,22 +207,18 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="status">Status</Label>
-                  <Select
-                    items={WEBHOOK_STATUS_ITEMS}
-                    value={active}
-                    onValueChange={handleStatusChange}
-                  >
-                    <SelectTrigger id="status" className="w-full">
-                      <SelectValue placeholder="Status do endpoint" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {WEBHOOK_STATUS_ITEMS.map((item) => (
-                        <SelectItem key={item.value} value={item.value} label={item.label}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center">
+                    <Switch
+                      checked={active}
+                      onCheckedChange={(checked) => {
+                        setActive(checked);
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {active ? 'Ativo (recebendo notificações)' : 'Inativo (suspenso)'}
+                    </span>
+                  </div>
                 </div>
 
                 <DialogFooter className="mt-4">
@@ -312,11 +292,9 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {wh.events?.map((ev) => (
-                          <Badge key={ev} variant="secondary" className="text-[10px]">
-                            {ev}
-                          </Badge>
-                        ))}
+                        <Badge variant="secondary" className="text-[10px]">
+                          {getWebhookEventLabel(wh.event)}
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -343,13 +321,9 @@ export default function WebhooksPage(_props: Route.ComponentProps) {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={
-                          wh.active
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                            : 'bg-muted text-muted-foreground border-border'
-                        }
+                        className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                       >
-                        {wh.active ? 'Ativo' : 'Inativo'}
+                        Ativo
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
