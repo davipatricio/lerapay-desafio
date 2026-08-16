@@ -1,6 +1,7 @@
 import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import * as mysql from 'mysql2';
 import { AuthModule } from './auth/auth.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { CorrelationIdMiddleware, HttpLoggerMiddleware, RequestContextModule } from './common';
@@ -22,6 +23,9 @@ import { validateEnvironment } from './config/env.validation';
       useFactory: (config: ConfigService) => ({
         autoLoadEntities: true,
         database: config.get<string>('DB_NAME', 'app'),
+        // Keep mysql2 statically reachable for serverless bundlers; TypeORM otherwise
+        // resolves it through a dynamic require that Vercel cannot trace.
+        driver: mysql,
         host: config.get<string>('DB_HOST', 'localhost'),
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         migrationsRun: true,
