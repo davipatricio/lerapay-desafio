@@ -147,8 +147,7 @@ export class AuthService {
     });
 
     const gatewayAccount =
-      user.gatewayAccount ??
-      this.gatewayAccountRepository.create({ userId: user.id });
+      user.gatewayAccount ?? this.gatewayAccountRepository.create({ userId: user.id });
 
     gatewayAccount.merchantToken = gatewayLoginRes.access_token;
     gatewayAccount.codeClient = gatewayLoginRes.code_client;
@@ -163,10 +162,7 @@ export class AuthService {
     user.gatewayAccount = gatewayAccount;
   }
 
-  private async buildAuthResponse(
-    user: User,
-    message?: string,
-  ): Promise<AuthResponseDto> {
+  private async buildAuthResponse(user: User, message?: string): Promise<AuthResponseDto> {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
       email: user.email,
