@@ -39,9 +39,17 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.payments.all(), id] as const,
   },
 
+  // Checkout Links
+  checkout: {
+    all: () => [...queryKeys.all, 'checkout'] as const,
+    list: () => [...queryKeys.checkout.all(), 'list'] as const,
+    detail: (id: string) => [...queryKeys.checkout.all(), id] as const,
+  },
+
   // Withdrawals
   withdrawals: {
     all: () => [...queryKeys.all, 'withdrawals'] as const,
+    list: () => [...queryKeys.withdrawals.all(), 'list'] as const,
     detail: (id: string) => [...queryKeys.withdrawals.all(), id] as const,
   },
 

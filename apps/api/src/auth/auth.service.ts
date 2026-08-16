@@ -13,7 +13,14 @@ import { Repository } from 'typeorm';
 import { GatewayService } from '../gateway/gateway.service';
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
-import type { AuthResponseDto, LinkGatewayDto, LoginDto, RegisterDto, UserProfileDto } from './dto';
+import type {
+  AuthResponseDto,
+  LinkGatewayDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  UserProfileDto,
+} from './dto';
 import { GatewayAccount } from './entities/gateway-account.entity';
 
 @Injectable()
@@ -81,6 +88,15 @@ export class AuthService {
           state: dto.state || 'SP',
         });
         gatewayMessage = gatewayRes.message;
+
+        // Auto-login to gateway on signup to immediately associate merchant token & credentials
+        try {
+          await this.authenticateWithGateway(user, cleanDocument, dto.password);
+        } catch (loginErr: any) {
+          this.logger.debug(
+            `Immediate gateway login after registration for user ${user.id} returned notice: ${loginErr?.message || loginErr}`,
+          );
+        }
       } catch (err: any) {
         this.logger.warn(
           `Gateway registration for user ${user.id} returned notice: ${err?.message || err}`,
@@ -109,15 +125,55 @@ export class AuthService {
     }
 
     // If gateway password was provided, attempt linking/refreshing gateway token
-    if (dto.gatewayPassword) {
+    const gatewayPass = dto.gatewayPassword || dto.password;
+    if (gatewayPass) {
       try {
-        await this.authenticateWithGateway(user, user.document, dto.gatewayPassword);
+        await this.authenticateWithGateway(user, user.document, gatewayPass);
       } catch (err: any) {
-        this.logger.warn(`Gateway login for user ${user.id} failed: ${err?.message || err}`);
+        this.logger.debug(
+          `Gateway login attempt for user ${user.id} returned notice: ${err?.message || err}`,
+        );
       }
     }
 
     return this.buildAuthResponse(user);
+  }
+
+  public async resetPassword(
+    dto: ResetPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    let cleanDoc = dto.document ? dto.document.replace(/\D/g, '') : undefined;
+    let email = dto.email?.toLowerCase().trim();
+
+    if (!cleanDoc && !email) {
+      throw new ConflictException('Either document or email must be provided');
+    }
+
+    if (!cleanDoc && email) {
+      const user = await this.usersService.findByEmail(email);
+      if (user) {
+        cleanDoc = user.document;
+      }
+    } else if (cleanDoc && !email) {
+      const user = await this.usersService.findByDocument(cleanDoc);
+      if (user) {
+        email = user.email;
+      }
+    }
+
+    try {
+      const res = await this.gatewayService.resetPassword({
+        document: cleanDoc || '',
+        email: email || '',
+      });
+      return res;
+    } catch (err: any) {
+      this.logger.warn(`Gateway reset password request failed: ${err?.message || err}`);
+      return {
+        success: true,
+        message: 'If the account exists on the gateway, reset instructions have been sent.',
+      };
+    }
   }
 
   public async linkGateway(userId: string, dto: LinkGatewayDto): Promise<UserProfileDto> {
@@ -127,7 +183,17 @@ export class AuthService {
     }
 
     const cleanDocument = dto.document.replace(/\D/g, '');
-    await this.authenticateWithGateway(user, cleanDocument, dto.gatewayPassword);
+    try {
+      await this.authenticateWithGateway(user, cleanDocument, dto.gatewayPassword);
+    } catch (err: any) {
+      if (err?.status === 401 || err?.data?.statusCode === 401) {
+        throw new UnauthorizedException(
+          'Credenciais do gateway inválidas. Use o documento e a senha enviados por e-mail pelo Lera Box, ou redefina a senha.',
+        );
+      }
+      this.logger.warn(`Gateway link failed for user ${user.id}: ${err?.message || err}`);
+      throw err;
+    }
 
     return this.mapToProfile(user);
   }

@@ -15,6 +15,32 @@ export function paymentDetailQueryOptions(id: string, options?: DomainQueryOptio
   });
 }
 
+export function publicCheckoutPaymentQueryOptions(
+  checkoutLinkId: string,
+  orderId: string,
+  options?: DomainQueryOptions,
+) {
+  const client = options?.client || defaultApiClient;
+
+  return queryOptions({
+    queryKey: [...queryKeys.payments.detail(orderId), 'checkout-link', checkoutLinkId],
+    queryFn: ({ signal }): Promise<PixPaymentResponse | CardPaymentResponse> =>
+      client.getPublicCheckoutPayment(checkoutLinkId, orderId, {
+        ...options?.requestOptions,
+        signal,
+      }),
+    enabled: Boolean(checkoutLinkId && orderId),
+  });
+}
+
 export function usePaymentDetailQuery(id: string, options?: DomainQueryOptions) {
   return useQuery(paymentDetailQueryOptions(id, options));
+}
+
+export function usePublicCheckoutPaymentQuery(
+  checkoutLinkId: string,
+  orderId: string,
+  options?: DomainQueryOptions,
+) {
+  return useQuery(publicCheckoutPaymentQueryOptions(checkoutLinkId, orderId, options));
 }

@@ -1,16 +1,20 @@
 import { ofetch, type $Fetch } from 'ofetch';
 import { getApiBaseUrl } from './config';
 import { parseApiError } from './errors';
+import { getAccessToken } from '../auth/token';
 import type {
   ApiClientOptions,
   ApiRequestOptions,
   HealthResponse,
   UserDto,
+  RegisterRequest,
   AuthResponse,
   WalletDto,
   TransactionDto,
   TransactionFilters,
   FeeDto,
+  LinkGatewayRequest,
+  ResetPasswordRequest,
   PixPaymentRequest,
   PixPaymentResponse,
   CardPaymentRequest,
@@ -169,7 +173,7 @@ export class ApiClient {
 
   // Auth / Users
   public async getMe(options?: ApiRequestOptions): Promise<UserDto> {
-    return this.get<UserDto>('/users/me', options);
+    return this.get<UserDto>('/auth/me', options);
   }
 
   public async login(
@@ -180,10 +184,28 @@ export class ApiClient {
   }
 
   public async register(
-    payload: Record<string, unknown>,
+    payload: RegisterRequest | Record<string, unknown>,
+    options?: ApiRequestOptions,
+  ): Promise<AuthResponse> {
+    return this.post<AuthResponse>('/auth/register', payload, options);
+  }
+
+  public async linkGateway(
+    payload: LinkGatewayRequest,
     options?: ApiRequestOptions,
   ): Promise<UserDto> {
-    return this.post<UserDto>('/users', payload, options);
+    return this.post<UserDto>('/auth/link-gateway', payload, options);
+  }
+
+  public async resetPassword(
+    payload: ResetPasswordRequest,
+    options?: ApiRequestOptions,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.post<{ success: boolean; message: string }>(
+      '/auth/reset-password',
+      payload,
+      options,
+    );
   }
 
   // Wallet & Transactions
@@ -203,10 +225,13 @@ export class ApiClient {
 
   // Fees
   public async getFees(brand?: string, options?: ApiRequestOptions): Promise<FeeDto[]> {
-    return this.get<FeeDto[]>('/fees', {
+    const res = await this.get<FeeDto[] | { total?: number; fees?: FeeDto[] }>('/fees', {
       ...options,
       query: { ...options?.query, ...(brand ? { brand } : {}) },
     });
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray((res as any).fees)) return (res as any).fees;
+    return [];
   }
 
   // Payments
@@ -231,6 +256,17 @@ export class ApiClient {
     return this.get<PixPaymentResponse | CardPaymentResponse>(`/payments/${id}`, options);
   }
 
+  public async getPublicCheckoutPayment(
+    checkoutLinkId: string,
+    orderId: string,
+    options?: ApiRequestOptions,
+  ): Promise<PixPaymentResponse | CardPaymentResponse> {
+    return this.get<PixPaymentResponse | CardPaymentResponse>(
+      `/payments/checkout-links/${checkoutLinkId}/${orderId}`,
+      options,
+    );
+  }
+
   // Checkout Links
   public async createCheckoutLink(
     data: CheckoutLinkRequest,
@@ -239,12 +275,24 @@ export class ApiClient {
     return this.post<CheckoutLinkDto>('/checkout-links', data, options);
   }
 
+  public async getCheckoutLinks(options?: ApiRequestOptions): Promise<CheckoutLinkDto[]> {
+    return this.get<CheckoutLinkDto[]>('/checkout-links', options);
+  }
+
+  public async getCheckoutLink(id: string, options?: ApiRequestOptions): Promise<CheckoutLinkDto> {
+    return this.get<CheckoutLinkDto>(`/checkout-links/${id}`, options);
+  }
+
   // Withdrawals
   public async createWithdrawal(
     data: WithdrawalRequest,
     options?: ApiRequestOptions,
   ): Promise<WithdrawalDto> {
     return this.post<WithdrawalDto>('/withdrawals', data, options);
+  }
+
+  public async getWithdrawals(options?: ApiRequestOptions): Promise<WithdrawalDto[]> {
+    return this.get<WithdrawalDto[]>('/withdrawals', options);
   }
 
   public async getWithdrawal(id: string, options?: ApiRequestOptions): Promise<WithdrawalDto> {
@@ -272,9 +320,11 @@ export class ApiClient {
 }
 
 /**
- * Browser singleton instance of ApiClient.
+ * Browser singleton instance of ApiClient with the persisted access token wired in.
  */
-export const defaultApiClient = new ApiClient();
+export const defaultApiClient = new ApiClient({
+  getToken: () => getAccessToken(),
+});
 
 /**
  * Creates a server-scoped ApiClient for use inside React Router SSR loaders.

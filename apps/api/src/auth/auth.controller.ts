@@ -3,7 +3,14 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { User } from '../users/entities/user.entity';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthResponseDto, LinkGatewayDto, LoginDto, RegisterDto, UserProfileDto } from './dto';
+import {
+  AuthResponseDto,
+  LinkGatewayDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+  UserProfileDto,
+} from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
@@ -46,6 +53,21 @@ export class AuthController {
   })
   public async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Request password reset for merchant account on Lera Box Gateway',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset request processed',
+  })
+  public async resetPassword(
+    @Body() dto: ResetPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.authService.resetPassword(dto);
   }
 
   @Post('link-gateway')

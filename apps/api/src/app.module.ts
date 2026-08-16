@@ -2,10 +2,16 @@ import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
+import { CheckoutModule } from './checkout/checkout.module';
 import { CorrelationIdMiddleware, HttpLoggerMiddleware, RequestContextModule } from './common';
+import { FeesModule } from './fees/fees.module';
 import { GatewayModule } from './gateway';
 import { HealthModule } from './health';
+import { PaymentsModule } from './payments/payments.module';
 import { UsersModule } from './users/users.module';
+import { WalletModule } from './wallet/wallet.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 
 @Module({
   imports: [
@@ -30,10 +36,16 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    FeesModule,
+    CheckoutModule,
+    PaymentsModule,
+    WalletModule,
+    WithdrawalsModule,
+    WebhooksModule,
   ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationIdMiddleware, HttpLoggerMiddleware).forRoutes('*');
+    consumer.apply(CorrelationIdMiddleware, HttpLoggerMiddleware).forRoutes('{*path}');
   }
 }

@@ -111,10 +111,20 @@ export class BranchPayClient {
 
   public async getFees(params?: GetFeesParams): Promise<FeeTableItem[]> {
     const query = params?.brand ? { brand: params.brand } : undefined;
-    return this.request<FeeTableItem[]>('/fees', {
-      method: 'GET',
-      query,
-    });
+    const res = await this.request<FeeTableItem[] | { total?: number; fees?: FeeTableItem[] }>(
+      '/fees',
+      {
+        method: 'GET',
+        query,
+      },
+    );
+    if (Array.isArray(res)) {
+      return res;
+    }
+    if (res && Array.isArray((res as any).fees)) {
+      return (res as any).fees;
+    }
+    return [];
   }
 
   // --- Protected Endpoints ---

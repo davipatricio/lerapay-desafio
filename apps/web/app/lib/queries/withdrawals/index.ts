@@ -4,6 +4,20 @@ import { queryKeys } from '../../query/keys';
 import type { DomainQueryOptions } from '../../query/types';
 import type { WithdrawalDto } from '../../api/types';
 
+export function withdrawalsListQueryOptions(options?: DomainQueryOptions) {
+  const client = options?.client || defaultApiClient;
+
+  return queryOptions({
+    queryKey: queryKeys.withdrawals.list(),
+    queryFn: ({ signal }): Promise<WithdrawalDto[]> =>
+      client.getWithdrawals({ ...options?.requestOptions, signal }),
+  });
+}
+
+export function useWithdrawalsListQuery(options?: DomainQueryOptions) {
+  return useQuery(withdrawalsListQueryOptions(options));
+}
+
 export function withdrawalDetailQueryOptions(id: string, options?: DomainQueryOptions) {
   const client = options?.client || defaultApiClient;
 

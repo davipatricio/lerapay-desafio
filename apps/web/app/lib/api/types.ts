@@ -49,19 +49,56 @@ export interface HealthResponse {
   database: 'connected' | 'disconnected' | string;
 }
 
+export interface GatewayAccountSummaryDto {
+  codeClient?: string | null;
+  chaveLoja?: string | null;
+  isLinked: boolean;
+  tokenExpiresAt?: string | null;
+}
+
 export interface UserDto {
   id: string;
   name: string;
   email: string;
   document: string;
-  accountType: 'individual' | 'company' | string;
-  role: string;
+  phone?: string;
+  personType: 'PF' | 'PJ';
+  tradingName?: string;
+  gatewayAccount?: GatewayAccountSummaryDto;
   createdAt: string;
+}
+
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  document: string;
+  phone: string;
+  personType?: 'PF' | 'PJ';
+  tradingName?: string;
+  zipCode?: string;
+  address?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  autoRegisterGateway?: boolean;
+}
+
+export interface LinkGatewayRequest {
+  document: string;
+  gatewayPassword: string;
+}
+
+export interface ResetPasswordRequest {
+  document?: string;
+  email?: string;
 }
 
 export interface AuthResponse {
   accessToken: string;
   user: UserDto;
+  message?: string;
 }
 
 export interface WalletDto {
@@ -98,43 +135,56 @@ export interface FeeDto {
 
 export interface PixPaymentRequest {
   amount: number;
+  payerDocument: string;
   description?: string;
+  checkoutLinkId?: string;
   externalReference?: string;
 }
 
 export interface PixPaymentResponse {
-  id: string;
+  success?: boolean;
+  orderId?: string;
+  id?: string;
   externalReference: string;
   amount: number;
   method: 'PIX';
   status: string;
   qrCodeBase64?: string;
   qrCode?: string;
-  expiresAt: string;
-  createdAt: string;
+  txid?: string;
+  expiresAt?: string;
+  createdAt?: string;
 }
 
 export interface CardPaymentRequest {
   amount: number;
+  cardNumber: string;
+  cardHolder: string;
+  expiryMonth: string;
+  expiryYear: string;
+  cvv: string;
+  brand: 'VISA' | 'MASTERCARD' | 'ELO';
   installments: number;
   feePercent: number;
-  cardNumber: string;
-  holderName: string;
-  expirationMonth: string;
-  expirationYear: string;
-  cvv: string;
+  description?: string;
+  checkoutLinkId?: string;
   externalReference?: string;
 }
 
 export interface CardPaymentResponse {
-  id: string;
+  success?: boolean;
+  orderId?: string;
+  id?: string;
+  transactionId?: string;
   externalReference: string;
   amount: number;
   method: 'CREDIT_CARD';
   status: string;
-  installments: number;
-  feePercent: number;
-  createdAt: string;
+  installments?: number;
+  feePercent?: number;
+  fee?: number;
+  netAmount?: number;
+  createdAt?: string;
 }
 
 export interface CheckoutLinkRequest {
@@ -151,8 +201,9 @@ export interface CheckoutLinkDto {
   title: string;
   amount: number;
   allowedMethods: string[];
+  maxInstallments?: number;
   status: 'ACTIVE' | 'EXPIRED' | 'COMPLETED';
-  url: string;
+  url?: string;
   expiresAt?: string;
   createdAt: string;
 }
