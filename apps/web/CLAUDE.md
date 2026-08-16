@@ -16,7 +16,7 @@ React Router 8 frontend application for the LeraPay monorepo. This file is scope
 
 These reflect how the scaffold is wired — match them when adding code:
 
-- **Routes are declared in `app/routes.ts`** using the `@react-router/dev/routes` helpers (e.g. `index('routes/home.tsx')`, `route(...)`). Add new routes there rather than via file-based routing magic — this is *config mode*, not flat-file routing.
+- **Routes are declared in `app/routes.ts`** using the `@react-router/dev/routes` helpers (e.g. `index('routes/home.tsx')`, `route(...)`). Add new routes there rather than via file-based routing magic — this is _config mode_, not flat-file routing.
 - **Route modules live in `app/routes/*.tsx`** (e.g. `app/routes/home.tsx`). Each exports `meta`, `loader`, `action`, and/or a default React component.
 - **Use generated route types.** After `react-router typegen`, each route gets a `./+types/<name>` module (e.g. `import type { Route } from './+types/home'`). Use `Route.ComponentProps`, `Route.LoaderArgs`, `Route.MetaArgs`, etc. — never hand-write prop/loader typing.
 - **`root.tsx` is the root layout.** It renders `<html>`, `<Links/>`, `<Meta/>`, `<Outlet/>`, `<ScrollRestoration/>`, and `<Scripts/>`. Keep global `meta`/`links` here; per-route meta belongs in the route module.
@@ -60,6 +60,7 @@ pnpm dlx shadcn@latest add <component-name>
 ```
 
 This will:
+
 1. Add the component to `app/components/`
 2. Register any dependencies in `package.json`
 3. Update `components.json` if needed
@@ -79,16 +80,16 @@ No `.env` is required for local dev. To talk to the API, target `http://localhos
 
 Run from this package via `pnpm --filter @lerapay/web <script>` (or `turbo run <script> --filter @lerapay/web`):
 
-| Script | Command | Purpose |
-| --- | --- | --- |
-| `dev` | `react-router dev` | Start dev server (Vite, HMR) |
-| `build` | `react-router build` | Production build to `build/` |
-| `start` | `react-router-serve ./build/server/index.js` | Serve the built SSR app |
-| `typecheck` | `react-router typegen && tsc` | Generate route types, then type-check |
-| `lint` | `oxlint .` | Lint with oxlint |
-| `lint:fix` | `oxlint . --fix` | Auto-fix lint issues |
-| `format` | `oxfmt .` | Format with oxfmt |
-| `format:check` | `oxfmt --check .` | Verify formatting |
+| Script         | Command                                      | Purpose                               |
+| -------------- | -------------------------------------------- | ------------------------------------- |
+| `dev`          | `react-router dev`                           | Start dev server (Vite, HMR)          |
+| `build`        | `react-router build`                         | Production build to `build/`          |
+| `start`        | `react-router-serve ./build/server/index.js` | Serve the built SSR app               |
+| `typecheck`    | `react-router typegen && tsc`                | Generate route types, then type-check |
+| `lint`         | `oxlint .`                                   | Lint with oxlint                      |
+| `lint:fix`     | `oxlint . --fix`                             | Auto-fix lint issues                  |
+| `format`       | `oxfmt .`                                    | Format with oxfmt                     |
+| `format:check` | `oxfmt --check .`                            | Verify formatting                     |
 
 `typecheck` runs `react-router typegen` first so the `./+types/*` route modules exist before `tsc` runs.
 
