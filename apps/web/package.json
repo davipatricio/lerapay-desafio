@@ -10,6 +10,7 @@
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "test": "vitest run",
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
@@ -50,6 +51,7 @@
     "oxlint": "catalog:",
     "tailwindcss": "4.3.3",
     "typescript": "catalog:frontend",
-    "vite": "8.2.1"
+    "vite": "8.2.1",
+    "vitest": "^4.1.0"
   }
 }

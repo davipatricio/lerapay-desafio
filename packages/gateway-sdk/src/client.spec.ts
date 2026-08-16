@@ -74,6 +74,28 @@ describe('BranchPayClient', () => {
     );
   });
 
+  it('serializes class-instance DTOs as JSON-compatible plain objects', async () => {
+    class WebhookDto {
+      public event = 'PAYMENT_PIX' as const;
+      public url = 'https://merchant.example/webhooks/pix';
+      public secret = 'webhook-secret';
+    }
+
+    const client = new BranchPayClient({ baseUrl: 'https://gateway.example/api' });
+    await client.upsertWebhook(new WebhookDto());
+
+    expect(mockedOfetch).toHaveBeenCalledWith(
+      'https://gateway.example/api/webhooks',
+      expect.objectContaining({
+        body: {
+          event: 'PAYMENT_PIX',
+          url: 'https://merchant.example/webhooks/pix',
+          secret: 'webhook-secret',
+        },
+      }),
+    );
+  });
+
   it('maps representative methods to their gateway contracts', async () => {
     const client = new BranchPayClient({ baseUrl: 'https://gateway.example/api' });
     const pixDto = {

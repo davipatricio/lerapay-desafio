@@ -86,6 +86,12 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
     }
     return true;
   });
+  const hasFilters = statusFilter !== 'ALL' || typeFilter !== 'ALL' || Boolean(search.trim());
+  const clearFilters = () => {
+    setStatusFilter('ALL');
+    setTypeFilter('ALL');
+    setSearch('');
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,8 +135,8 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
               </FieldContent>
             </Field>
 
-            <div className="flex flex-wrap items-end gap-2">
-              <Field className="w-44">
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
+              <Field className="w-full sm:w-44">
                 <FieldLabel className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                   <SlidersHorizontal className="size-3.5" />
                   Status
@@ -155,7 +161,7 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
                 </FieldContent>
               </Field>
 
-              <Field className="w-44">
+              <Field className="w-full sm:w-44">
                 <FieldLabel className="text-xs font-medium text-muted-foreground">Tipo</FieldLabel>
                 <FieldContent>
                   <Select
@@ -176,6 +182,16 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
                   </Select>
                 </FieldContent>
               </Field>
+              {hasFilters ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="justify-self-start"
+                >
+                  Limpar filtros
+                </Button>
+              ) : null}
             </div>
           </div>
         </CardContent>
@@ -192,8 +208,23 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
             <div className="p-6">
               <EmptyState
                 icon={Receipt}
-                title="Nenhuma transação encontrada"
-                description="Tente redefinir os filtros ou os termos de busca."
+                title={
+                  hasFilters
+                    ? 'Nenhuma transação corresponde aos filtros'
+                    : 'Nenhuma transação registrada ainda'
+                }
+                description={
+                  hasFilters
+                    ? 'Ajuste a busca ou limpe os filtros para consultar todas as movimentações.'
+                    : 'As entradas e saídas da sua conta aparecerão aqui.'
+                }
+                action={
+                  hasFilters ? (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Limpar filtros
+                    </Button>
+                  ) : undefined
+                }
               />
             </div>
           ) : (
@@ -205,7 +236,7 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
                   <TableHead>Referência</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Taxa</TableHead>
+                  <TableHead className="hidden text-right lg:table-cell">Taxa</TableHead>
                   <TableHead className="text-right">Líquido</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -225,11 +256,13 @@ export default function TransactionsPage(_props: Route.ComponentProps) {
                     <TableCell className="max-w-[200px] truncate text-xs">
                       {tx.description || 'Transação BaaS'}
                     </TableCell>
-                    <TableCell className="text-right font-medium">{formatBRL(tx.amount)}</TableCell>
-                    <TableCell className="text-right text-xs text-muted-foreground">
+                    <TableCell className="text-right font-medium tabular-nums">
+                      {formatBRL(tx.amount)}
+                    </TableCell>
+                    <TableCell className="hidden text-right text-xs text-muted-foreground tabular-nums lg:table-cell">
                       {tx.fee ? formatBRL(tx.fee) : 'R$ 0,00'}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell className="text-right font-semibold tabular-nums">
                       {formatBRL(tx.netAmount ?? tx.amount)}
                     </TableCell>
                     <TableCell>

@@ -41,9 +41,10 @@ export function LinkGatewayModal({
   const linkMutation = useLinkGatewayMutation();
   const resetMutation = useResetPasswordMutation();
 
-  const isTokenExpired = user?.gatewayAccount?.isLinked && user?.gatewayAccount?.tokenExpiresAt
-    ? new Date(user.gatewayAccount.tokenExpiresAt) < new Date()
-    : false;
+  const isTokenExpired =
+    user?.gatewayAccount?.isLinked && user?.gatewayAccount?.tokenExpiresAt
+      ? new Date(user.gatewayAccount.tokenExpiresAt) < new Date()
+      : false;
 
   const handleLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,9 +65,8 @@ export function LinkGatewayModal({
         document: cleanDoc,
         gatewayPassword,
       });
-      toast.success(isTokenExpired
-        ? 'Gateway re-autenticado com sucesso!'
-        : 'Gateway vinculado com sucesso!'
+      toast.success(
+        isTokenExpired ? 'Gateway re-autenticado com sucesso!' : 'Gateway vinculado com sucesso!',
       );
       setGatewayPassword('');
       setIsOpen(false);

@@ -37,8 +37,11 @@ export function createQueryClient(): QueryClient {
           if (
             isLocalSessionExpiredError(error) ||
             isGatewayReauthError(error) ||
-            (error && typeof error === 'object' && 'statusCode' in error &&
-              Number(error.statusCode) >= 400 && Number(error.statusCode) < 500)
+            (error &&
+              typeof error === 'object' &&
+              'statusCode' in error &&
+              Number(error.statusCode) >= 400 &&
+              Number(error.statusCode) < 500)
           ) {
             return false;
           }

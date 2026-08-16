@@ -30,6 +30,31 @@ export interface BranchPayClientOptions {
   timeout?: number;
 }
 
+/**
+ * O `ofetch` só serializa corpos cujo construtor é `Object`; uma instância de
+ * classe (como um DTO já validado pelo Nest) seria enviada como a string
+ * `"[object Object]"`. Copiar para um objeto simples preserva o JSON esperado
+ * pelo gateway sem alterar corpos binários ou de formulário.
+ */
+function toPlainJsonBody(body: FetchOptions<'json'>['body']): FetchOptions<'json'>['body'] {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return body;
+  }
+
+  if (
+    body instanceof FormData ||
+    body instanceof URLSearchParams ||
+    body instanceof Blob ||
+    body instanceof ArrayBuffer ||
+    body instanceof ReadableStream ||
+    ArrayBuffer.isView(body)
+  ) {
+    return body;
+  }
+
+  return { ...body };
+}
+
 export class BranchPayClient {
   private readonly baseUrl: string;
   private token?: string;
@@ -68,6 +93,7 @@ export class BranchPayClient {
       const url = `${this.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
       return await ofetch<T>(url, {
         ...options,
+        body: toPlainJsonBody(options.body),
         headers,
         timeout: this.timeout,
         responseType: 'json',

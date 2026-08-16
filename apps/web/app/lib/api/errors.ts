@@ -66,6 +66,66 @@ export function isLocalSessionExpiredError(error: unknown): boolean {
   return error.statusCode === 401;
 }
 
+export interface ErrorPresentation {
+  title: string;
+  message: string;
+  retryable: boolean;
+  correlationId?: string;
+}
+
+/**
+ * Converts normalized API failures into safe, actionable merchant-facing copy.
+ * Deliberately never exposes raw responses, API paths, or arbitrary server messages.
+ */
+export function getErrorPresentation(error: unknown): ErrorPresentation {
+  const apiError = parseApiError(error);
+  const correlationId = apiError.correlationId;
+
+  if (isLocalSessionExpiredError(apiError)) {
+    return {
+      title: 'Sua sessão expirou',
+      message: 'Faça login novamente para continuar acessando sua conta.',
+      retryable: false,
+      correlationId,
+    };
+  }
+
+  if (isGatewayReauthError(apiError)) {
+    return {
+      title: 'Reconecte o gateway',
+      message:
+        'A sessão com o Gateway Lera Box precisa ser atualizada para consultar estas informações.',
+      retryable: false,
+      correlationId,
+    };
+  }
+
+  if (apiError.statusCode === 403) {
+    return {
+      title: 'Acesso não autorizado',
+      message: 'Sua conta não tem permissão para realizar esta operação.',
+      retryable: false,
+      correlationId,
+    };
+  }
+
+  if (apiError.statusCode >= 400 && apiError.statusCode < 500) {
+    return {
+      title: 'Não foi possível concluir a operação',
+      message: 'Revise as informações informadas e tente novamente.',
+      retryable: false,
+      correlationId,
+    };
+  }
+
+  return {
+    title: 'Não foi possível carregar estas informações',
+    message: 'Verifique sua conexão e tente novamente em alguns instantes.',
+    retryable: true,
+    correlationId,
+  };
+}
+
 /**
  * Normalizes any caught error (ofetch FetchError, Error, or API JSON response) into an ApiClientError.
  */

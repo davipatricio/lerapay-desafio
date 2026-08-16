@@ -8,7 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreditCard, RefreshCw } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { feesQueryOptions } from '../../lib/queries';
@@ -37,7 +38,7 @@ function normalizeFees(data: unknown): FeeDto[] {
 }
 
 export default function FeesPage(_props: Route.ComponentProps) {
-  const { data } = useDashboardQuery(feesQueryOptions());
+  const { data, refetch, isRefetching } = useDashboardQuery(feesQueryOptions());
   const fees = normalizeFees(data);
 
   const groupedFees = fees.reduce<Record<string, FeeDto[]>>((groups, fee) => {
@@ -67,6 +68,18 @@ export default function FeesPage(_props: Route.ComponentProps) {
       <PageHeader
         title="Tarifas de cartão"
         description="Consulte as taxas oficiais do gateway Lera Box por bandeira e número de parcelas."
+        actions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isRefetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`size-3.5 ${isRefetching ? 'animate-spin' : ''}`} />
+            <span>Atualizar</span>
+          </Button>
+        }
       />
 
       {brands.length === 0 ? (
@@ -74,8 +87,8 @@ export default function FeesPage(_props: Route.ComponentProps) {
           <CardContent className="p-6">
             <EmptyState
               icon={CreditCard}
-              title="Tarifas não disponíveis"
-              description="Não foi possível carregar a tabela de taxas do gateway no momento."
+              title="Nenhuma tarifa disponível"
+              description="O gateway ainda não retornou faixas de parcelamento para sua conta. Tente atualizar novamente em alguns instantes."
             />
           </CardContent>
         </Card>
@@ -100,7 +113,7 @@ export default function FeesPage(_props: Route.ComponentProps) {
                         {brandFees.length} faixas de parcelamento
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-[10px] uppercase">
+                    <Badge variant="outline" className="text-xs uppercase">
                       {brand}
                     </Badge>
                   </div>

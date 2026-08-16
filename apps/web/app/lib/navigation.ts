@@ -22,7 +22,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/dashboard/fees', label: 'Tarifas', icon: Percent },
-  { to: '/dashboard/checkout', label: 'Checkout Links', icon: Link2 },
+  { to: '/dashboard/checkout', label: 'Links de Checkout', icon: Link2 },
   { to: '/dashboard/wallet', label: 'Carteira', icon: Wallet },
   { to: '/dashboard/transactions', label: 'Transações', icon: Receipt },
   { to: '/dashboard/withdrawals', label: 'Saques', icon: ArrowDownToLine },

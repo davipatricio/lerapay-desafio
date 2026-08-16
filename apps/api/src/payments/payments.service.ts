@@ -115,8 +115,19 @@ export class PaymentsService {
     );
 
     const status = gatewayRes.success ? 'APPROVED' : 'DENIED';
-    const feeAmount = gatewayRes.fee || Math.round((context.amount * dto.feePercent) / 100);
-    const netAmount = gatewayRes.netAmount || context.amount - feeAmount;
+    const fallbackFeeAmount = Math.round((context.amount * dto.feePercent) / 100);
+    const gatewaySummary =
+      gatewayRes.fee && typeof gatewayRes.fee === 'object'
+        ? (gatewayRes.fee as Record<string, unknown>)
+        : null;
+    const gatewayFee = Number(gatewaySummary?.feeAmount ?? gatewayRes.fee);
+    const feeAmount =
+      Number.isFinite(gatewayFee) && gatewayFee > 0 ? gatewayFee : fallbackFeeAmount;
+    const gatewayNetAmount = Number(gatewaySummary?.netAmount ?? gatewayRes.netAmount);
+    const netAmount =
+      Number.isFinite(gatewayNetAmount) && gatewayNetAmount > 0
+        ? gatewayNetAmount
+        : context.amount - feeAmount;
 
     const order = this.orderRepository.create({
       userId: context.userId,

@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -39,9 +38,9 @@ import {
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
-  type LucideIcon,
 } from 'lucide-react';
 import { TransactionTypeBadge } from '@/components/dashboard/transaction-type-badge';
+import { PageHeader, StatusBadge, SummaryStrip } from '@/components/dashboard';
 import {
   checkoutLinksQueryOptions,
   useMeQuery,
@@ -61,32 +60,6 @@ export function meta(_: Route.MetaArgs) {
   ];
 }
 
-type TxStatus = 'APPROVED' | 'PENDING' | 'DENIED' | 'EXPIRED' | 'CANCELLED' | string;
-
-const statusTone: Record<string, string> = {
-  APPROVED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-  PENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  DENIED: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-  EXPIRED: 'bg-muted text-muted-foreground border-border',
-  CANCELLED: 'bg-muted text-muted-foreground border-border',
-};
-
-const statusLabel: Record<string, string> = {
-  APPROVED: 'Aprovado',
-  PENDING: 'Pendente',
-  DENIED: 'Negado',
-  EXPIRED: 'Expirado',
-  CANCELLED: 'Cancelado',
-};
-
-function StatusBadge({ status }: { status: TxStatus }) {
-  return (
-    <Badge variant="outline" className={statusTone[status] || statusTone.CANCELLED}>
-      {statusLabel[status] || status}
-    </Badge>
-  );
-}
-
 function formatDate(iso?: string): string {
   if (!iso) return '-';
   return new Date(iso).toLocaleString('pt-BR', {
@@ -102,33 +75,6 @@ function asTransactions(data: unknown): TransactionDto[] {
   if (Array.isArray(data)) return data as TransactionDto[];
   const nested = (data as any)?.transactions;
   return Array.isArray(nested) ? (nested as TransactionDto[]) : [];
-}
-
-function StatCard({
-  title,
-  value,
-  sub,
-  icon: Icon,
-}: {
-  title: string;
-  value: string;
-  sub: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between text-muted-foreground">
-          <span className="text-xs font-medium">{title}</span>
-          <Icon className="size-4" />
-        </div>
-        <>
-          <p className="mt-2 text-xl font-bold tracking-tight">{value}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{sub}</p>
-        </>
-      </CardContent>
-    </Card>
-  );
 }
 
 // The chart pulls in recharts (and its d3/redux deps); code-split it so the
@@ -232,8 +178,8 @@ export default function Dashboard(_props: Route.ComponentProps) {
     gatewayPending ||
     Boolean(
       meUser?.gatewayAccount?.isLinked &&
-        meUser.gatewayAccount.tokenExpiresAt &&
-        new Date(meUser.gatewayAccount.tokenExpiresAt) < new Date(),
+      meUser.gatewayAccount.tokenExpiresAt &&
+      new Date(meUser.gatewayAccount.tokenExpiresAt) < new Date(),
     );
   const isGatewayLinked = Boolean(meUser?.gatewayAccount?.isLinked) && !isGatewayTokenExpired;
 
@@ -266,7 +212,9 @@ export default function Dashboard(_props: Route.ComponentProps) {
               onClick={() => setLinkOpen(true)}
             >
               <ShieldCheck className="size-4" />
-              <span>{isGatewayTokenExpired ? 'Reautenticar Gateway' : 'Vincular Gateway agora'}</span>
+              <span>
+                {isGatewayTokenExpired ? 'Reautenticar Gateway' : 'Vincular Gateway agora'}
+              </span>
             </Button>
             {linkOpen ? (
               <Suspense fallback={null}>
@@ -277,59 +225,64 @@ export default function Dashboard(_props: Route.ComponentProps) {
         </Card>
       )}
 
-      {/* Page header with quick actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-sm text-muted-foreground">
-            Visão consolidada da conta, transações e saldo no gateway Lera Box
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={isWalletRefetching}
-            className="gap-2"
-          >
-            <RefreshCw className={`size-3.5 ${isWalletRefetching ? 'animate-spin' : ''}`} />
-            <span>Atualizar</span>
-          </Button>
-          <Button size="sm" render={<Link to="/dashboard/checkout" />} className="gap-2">
-            <Plus className="size-3.5" />
-            <span>Novo Link</span>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Visão consolidada da conta, transações e saldo no gateway Lera Box"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshAll}
+              disabled={isWalletRefetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`size-3.5 ${isWalletRefetching ? 'animate-spin' : ''}`} />
+              <span>Atualizar</span>
+            </Button>
+            <Button size="sm" render={<Link to="/dashboard/checkout" />} className="gap-2">
+              <Plus className="size-3.5" />
+              <span>Novo Link</span>
+            </Button>
+          </>
+        }
+      />
 
-      {/* Operational summary strip */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Saldo disponível"
-          value={formatBRL(wallet?.balance ?? 0)}
-          sub={`${formatBRL(wallet?.blockedBalance ?? 0)} bloqueado`}
-          icon={Wallet}
-        />
-        <StatCard
-          title="Volume aprovado"
-          value={formatBRL(approvedVolume)}
-          sub={`${approvedCount} transação(ões) aprovada(s)`}
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Total de transações"
-          value={String(transactions.length)}
-          sub="No extrato recente"
-          icon={Receipt}
-        />
-        <StatCard
-          title="Em processamento"
-          value={String(pendingCount)}
-          sub="Aguardando confirmação"
-          icon={Clock}
-        />
-      </div>
+      <SummaryStrip
+        items={[
+          {
+            key: 'available-balance',
+            label: 'Saldo disponível',
+            value: formatBRL(wallet?.balance ?? 0),
+            sub: `${formatBRL(wallet?.blockedBalance ?? 0)} bloqueado`,
+            icon: Wallet,
+            featured: true,
+          },
+          {
+            key: 'approved-volume',
+            label: 'Volume aprovado',
+            value: formatBRL(approvedVolume),
+            sub: `${approvedCount} transação(ões) aprovada(s)`,
+            icon: TrendingUp,
+            tone: 'success',
+          },
+          {
+            key: 'transactions',
+            label: 'Total de transações',
+            value: String(transactions.length),
+            sub: 'No extrato recente',
+            icon: Receipt,
+          },
+          {
+            key: 'pending',
+            label: 'Em processamento',
+            value: String(pendingCount),
+            sub: 'Aguardando confirmação',
+            icon: Clock,
+            tone: 'warning',
+          },
+        ]}
+      />
 
       {/* Transaction-volume trend (real data) — lazy chunk, skeleton while it loads */}
       <Suspense fallback={<VolumeChartSkeleton />}>
@@ -448,16 +401,7 @@ export default function Dashboard(_props: Route.ComponentProps) {
                       </ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <Badge
-                        variant="outline"
-                        className={
-                          link.status === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                            : 'bg-muted text-muted-foreground border-border'
-                        }
-                      >
-                        {link.status === 'ACTIVE' ? 'Ativo' : 'Concluído'}
-                      </Badge>
+                      <StatusBadge status={link.status} />
                     </ItemActions>
                   </Item>
                 ))}
@@ -498,18 +442,7 @@ export default function Dashboard(_props: Route.ComponentProps) {
                       <ItemDescription className="font-mono">{w.pixKey}</ItemDescription>
                     </ItemContent>
                     <ItemActions>
-                      <Badge
-                        variant="outline"
-                        className={
-                          w.status === 'APPROVED' || w.status === 'COMPLETED'
-                            ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-600 border-amber-500/20'
-                        }
-                      >
-                        {w.status === 'APPROVED' || w.status === 'COMPLETED'
-                          ? 'Concluído'
-                          : 'Processando'}
-                      </Badge>
+                      <StatusBadge status={w.status} />
                     </ItemActions>
                   </Item>
                 ))}

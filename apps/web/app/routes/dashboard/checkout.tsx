@@ -19,14 +19,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { PageHeader } from '@/components/dashboard/page-header';
 import {
   Field,
   FieldDescription,
@@ -63,7 +58,8 @@ import { useDashboardQuery } from '../../lib/query/options';
 import { useCreateCheckoutLinkMutation } from '../../lib/mutations';
 import { formatBRL } from '../../lib/money';
 import type { Route } from './+types/checkout';
-import { cn } from '@/lib/utils';
+import { cn, copyToClipboard } from '@/lib/utils';
+import { getErrorPresentation } from '@/lib/api/errors';
 
 export function meta(_: Route.MetaArgs) {
   return [
@@ -125,6 +121,9 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<ReturnType<typeof getErrorPresentation> | null>(
+    null,
+  );
 
   // Form State
   const [title, setTitle] = useState('');
@@ -136,7 +135,13 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
 
   const handleCopyLink = async (id: string) => {
     const url = `${window.location.origin}/checkout/${id}`;
-    await navigator.clipboard.writeText(url);
+    const copied = await copyToClipboard(url);
+
+    if (!copied) {
+      toast.error('Não foi possível copiar o link. Copie a URL manualmente na página de checkout.');
+      return;
+    }
+
     setCopiedId(id);
     toast.success('Link de pagamento copiado para a área de transferência!');
     setTimeout(() => setCopiedId(null), 2000);
@@ -167,6 +172,8 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
+    setCreateError(null);
+
     try {
       const created = await createMutation.mutateAsync({
         title: title.trim(),
@@ -181,12 +188,18 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
       setTitle('');
       setAmountCents(0);
 
-      // Auto copy
+      // Auto copy when the browser grants clipboard access; creation succeeds either way.
       const url = `${window.location.origin}/checkout/${created.id}`;
-      await navigator.clipboard.writeText(url);
-      toast.info('Link copiado para a área de transferência');
-    } catch (err: any) {
-      toast.error(err?.message || 'Falha ao criar link de checkout');
+      const copied = await copyToClipboard(url);
+      if (copied) {
+        toast.info('Link copiado para a área de transferência');
+      } else {
+        toast.warning('Link criado. Copie a URL manualmente na página de checkout.');
+      }
+    } catch (err: unknown) {
+      const presentation = getErrorPresentation(err);
+      setCreateError(presentation);
+      toast.error(presentation.title);
     }
   };
 
@@ -199,92 +212,136 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
   const hasNone = links.length === 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Links de Checkout</h2>
-          <p className="text-sm text-muted-foreground">
-            Crie links personalizados de cobrança com Pix instantâneo e Cartão de Crédito
-          </p>
-        </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Links de checkout"
+        description="Crie links personalizados de cobrança com Pix e Cartão de Crédito."
+        actions={
+          <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+              setIsOpen(open);
+              if (!open) {
+                setCreateError(null);
+              }
+            }}
+          >
+            <DialogTrigger
+              render={
+                <Button
+                  className="w-full gap-2 sm:w-auto"
+                  aria-label="Criar novo link de checkout"
+                />
+              }
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              <span>Novo Link de Checkout</span>
+            </DialogTrigger>
 
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger render={<Button className="gap-2" />}>
-            <Plus className="size-4" />
-            <span>Novo Link de Checkout</span>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Criar Link de Pagamento</DialogTitle>
-              <DialogDescription>
-                Configure os parâmetros da cobrança para disponibilizar aos seus clientes.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Criar Link de Pagamento</DialogTitle>
+                <DialogDescription>
+                  Configure os parâmetros da cobrança para disponibilizar aos seus clientes.
+                </DialogDescription>
+              </DialogHeader>
 
-            <form onSubmit={handleCreate} className="space-y-4 py-2">
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="title">Título ou Descrição do Item *</FieldLabel>
-                  <FieldDescription>Nome que o cliente verá na tela de pagamento.</FieldDescription>
-                  <Input
-                    id="title"
-                    placeholder="Ex: Mensalidade Curso / Consultoria"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </Field>
+              {createError ? (
+                <Alert variant="destructive" className="-mb-1">
+                  <AlertTitle>{createError.title}</AlertTitle>
+                  <AlertDescription>
+                    {createError.message}
+                    {createError.correlationId ? ` Código: ${createError.correlationId}` : ''}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
-                <Field>
-                  <FieldLabel htmlFor="amount">Valor da Cobrança (R$) *</FieldLabel>
-                  <FieldDescription>Valor mínimo de R$ 1,00.</FieldDescription>
-                  <MoneyInput
-                    id="amount"
-                    aria-label="Valor da cobrança em reais"
-                    value={amountCents}
-                    onValueChange={setAmountCents}
-                  />
-                </Field>
-
-                <FieldSet>
-                  <FieldLegend>Métodos de Pagamento Permitidos</FieldLegend>
-                  <div className="grid grid-cols-2 gap-2">
-                    <MethodToggle
-                      label="Pix"
-                      icon={<QrCode className="size-4" />}
-                      tone="text-emerald-500"
-                      checked={allowPix}
-                      onCheckedChange={(c) => setAllowPix(c)}
-                    />
-                    <MethodToggle
-                      label="Cartão"
-                      icon={<CreditCard className="size-4" />}
-                      tone="text-sky-500"
-                      checked={allowCard}
-                      onCheckedChange={(c) => setAllowCard(c)}
-                    />
-                  </div>
-                  {!allowPix && !allowCard && (
-                    <p className="text-xs text-destructive">
-                      Selecione ao menos um método de pagamento.
-                    </p>
-                  )}
-                </FieldSet>
-
-                {allowCard && (
+              <form onSubmit={handleCreate} className="space-y-4 py-2">
+                <FieldGroup>
                   <Field>
-                    <FieldLabel htmlFor="installments">Máximo de Parcelas no Cartão</FieldLabel>
+                    <FieldLabel htmlFor="title">Título ou Descrição do Item *</FieldLabel>
+                    <FieldDescription>
+                      Nome que o cliente verá na tela de pagamento.
+                    </FieldDescription>
+                    <Input
+                      id="title"
+                      placeholder="Ex: Mensalidade Curso / Consultoria"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </Field>
+
+                  <Field>
+                    <FieldLabel htmlFor="amount">Valor da Cobrança (R$) *</FieldLabel>
+                    <FieldDescription>Valor mínimo de R$ 1,00.</FieldDescription>
+                    <MoneyInput
+                      id="amount"
+                      aria-label="Valor da cobrança em reais"
+                      value={amountCents}
+                      onValueChange={setAmountCents}
+                    />
+                  </Field>
+
+                  <FieldSet>
+                    <FieldLegend>Métodos de Pagamento Permitidos</FieldLegend>
+                    <div className="grid grid-cols-2 gap-2">
+                      <MethodToggle
+                        label="Pix"
+                        icon={<QrCode className="size-4" />}
+                        tone="text-emerald-500"
+                        checked={allowPix}
+                        onCheckedChange={(c) => setAllowPix(c)}
+                      />
+                      <MethodToggle
+                        label="Cartão"
+                        icon={<CreditCard className="size-4" />}
+                        tone="text-sky-500"
+                        checked={allowCard}
+                        onCheckedChange={(c) => setAllowCard(c)}
+                      />
+                    </div>
+                    {!allowPix && !allowCard && (
+                      <p className="text-xs text-destructive">
+                        Selecione ao menos um método de pagamento.
+                      </p>
+                    )}
+                  </FieldSet>
+
+                  {allowCard && (
+                    <Field>
+                      <FieldLabel htmlFor="installments">Máximo de Parcelas no Cartão</FieldLabel>
+                      <Select
+                        items={installmentItems}
+                        value={String(maxInstallments)}
+                        onValueChange={(v) => setMaxInstallments(Number(v))}
+                      >
+                        <SelectTrigger id="installments" size="default" className="w-full">
+                          <SelectValue placeholder="Selecione o nº de parcelas" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {installmentItems.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value} label={opt.label}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  )}
+
+                  <Field>
+                    <FieldLabel htmlFor="expires">Validade do Link</FieldLabel>
                     <Select
-                      items={installmentItems}
-                      value={String(maxInstallments)}
-                      onValueChange={(v) => setMaxInstallments(Number(v))}
+                      items={expiryItems}
+                      value={String(expiresInDays)}
+                      onValueChange={(v) => setExpiresInDays(Number(v))}
                     >
-                      <SelectTrigger id="installments" size="default" className="w-full">
-                        <SelectValue placeholder="Selecione o nº de parcelas" />
+                      <SelectTrigger id="expires" size="default" className="w-full">
+                        <SelectValue placeholder="Selecione a validade" />
                       </SelectTrigger>
                       <SelectContent>
-                        {installmentItems.map((opt) => (
+                        {expiryItems.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value} label={opt.label}>
                             {opt.label}
                           </SelectItem>
@@ -292,46 +349,26 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
                       </SelectContent>
                     </Select>
                   </Field>
-                )}
+                </FieldGroup>
 
-                <Field>
-                  <FieldLabel htmlFor="expires">Validade do Link</FieldLabel>
-                  <Select
-                    items={expiryItems}
-                    value={String(expiresInDays)}
-                    onValueChange={(v) => setExpiresInDays(Number(v))}
+                <DialogFooter className="mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsOpen(false)}
+                    disabled={createMutation.isPending}
                   >
-                    <SelectTrigger id="expires" size="default" className="w-full">
-                      <SelectValue placeholder="Selecione a validade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {expiryItems.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value} label={opt.label}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              </FieldGroup>
-
-              <DialogFooter className="mt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsOpen(false)}
-                  disabled={createMutation.isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Criando...' : 'Criar Link'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending}>
+                    {createMutation.isPending ? 'Criando...' : 'Criar Link'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
       {/* Links List Table */}
       <Card>
@@ -354,24 +391,18 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
         </CardHeader>
         <CardContent className="p-0">
           {hasNone ? (
-            <Empty className="p-12">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <Link2 />
-                </EmptyMedia>
-                <EmptyTitle>Nenhum link de checkout criado</EmptyTitle>
-                <EmptyDescription>
-                  Crie um novo link para começar a aceitar pagamentos com QR Code Pix instantâneo e
-                  Cartão de Crédito parcelado.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
+            <EmptyState
+              className="p-12"
+              icon={Link2}
+              title="Nenhum link de checkout criado"
+              description="Crie um novo link para começar a aceitar pagamentos com QR Code Pix e Cartão de Crédito parcelado."
+              action={
                 <Button size="sm" className="gap-2" onClick={() => setIsOpen(true)}>
-                  <Plus className="size-3.5" />
+                  <Plus className="size-3.5" aria-hidden="true" />
                   <span>Criar Link Agora</span>
                 </Button>
-              </EmptyContent>
-            </Empty>
+              }
+            />
           ) : filteredLinks.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <Search className="mb-3 size-10 text-muted-foreground/50" />
@@ -424,7 +455,7 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
                           {link.allowedMethods.includes('PIX') && (
                             <Badge
                               variant="secondary"
-                              className="border-0 bg-emerald-500/10 text-[10px] text-emerald-600"
+                              className="border-0 bg-emerald-500/10 text-xs text-emerald-600"
                             >
                               Pix
                             </Badge>
@@ -432,7 +463,7 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
                           {link.allowedMethods.includes('CREDIT_CARD') && (
                             <Badge
                               variant="secondary"
-                              className="border-0 bg-sky-500/10 text-[10px] text-sky-600"
+                              className="border-0 bg-sky-500/10 text-xs text-sky-600"
                             >
                               Cartão
                             </Badge>
@@ -471,6 +502,7 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
                             size="icon-sm"
                             onClick={() => handleCopyLink(link.id)}
                             title="Copiar link"
+                            aria-label={`Copiar link de ${link.title}`}
                           >
                             {isCopied ? (
                               <Check className="size-3.5 text-emerald-600" />
@@ -487,6 +519,7 @@ export default function CheckoutPage(_props: Route.ComponentProps) {
                                 target="_blank"
                                 rel="noreferrer"
                                 title="Abrir página de checkout"
+                                aria-label={`Abrir página de checkout de ${link.title}`}
                               />
                             }
                           >

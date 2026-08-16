@@ -21,6 +21,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { TransactionTypeBadge } from '@/components/dashboard/transaction-type-badge';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { SummaryStrip } from '@/components/dashboard/summary-strip';
 import { formatDateTime, formatReference } from '@/lib/dashboard';
 import {
   Wallet,
@@ -91,6 +92,11 @@ export default function WalletPage(_props: Route.ComponentProps) {
     if (typeFilter !== 'ALL' && t.type !== typeFilter) return false;
     return true;
   });
+  const hasFilters = statusFilter !== 'ALL' || typeFilter !== 'ALL';
+  const clearFilters = () => {
+    setStatusFilter('ALL');
+    setTypeFilter('ALL');
+  };
 
   const totalInflow = transactions
     .filter((t: TransactionDto) => t.status === 'APPROVED' && t.type !== 'WITHDRAWAL')
@@ -127,64 +133,44 @@ export default function WalletPage(_props: Route.ComponentProps) {
         }
       />
 
-      {/* Balance Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-primary">
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Saldo Disponível
-              </span>
-              <Wallet className="size-4" />
-            </div>
-            <p className="mt-3 text-3xl font-bold tracking-tight text-primary">
-              {formatBRL(wallet?.balance ?? 0)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Livre para saque imediato via Pix</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-medium">Saldo Bloqueado / Reserva</span>
-              <ArrowDownToLine className="size-4" />
-            </div>
-            <p className="mt-3 text-2xl font-bold tracking-tight">
-              {formatBRL(wallet?.blockedBalance ?? 0)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {totalOutflow > 0
+      <SummaryStrip
+        items={[
+          {
+            key: 'available-balance',
+            label: 'Saldo disponível',
+            value: formatBRL(wallet?.balance ?? 0),
+            sub: 'Livre para saque imediato via Pix',
+            icon: Wallet,
+            featured: true,
+          },
+          {
+            key: 'blocked-balance',
+            label: 'Saldo bloqueado / reserva',
+            value: formatBRL(wallet?.blockedBalance ?? 0),
+            sub:
+              totalOutflow > 0
                 ? `${formatBRL(totalOutflow)} em saques realizados`
-                : 'Retenções ou liquidações futuras'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400">
-              <span className="text-xs font-medium">Entradas Aprovadas</span>
-              <TrendingUp className="size-4" />
-            </div>
-            <p className="mt-3 text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-              {formatBRL(totalInflow)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Vendas Pix e Cartão</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-xs font-medium">Taxas Processadas</span>
-              <Receipt className="size-4" />
-            </div>
-            <p className="mt-3 text-2xl font-bold tracking-tight">{formatBRL(totalFees)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Tarifas de cartão retidas</p>
-          </CardContent>
-        </Card>
-      </div>
+                : 'Retenções ou liquidações futuras',
+            icon: ArrowDownToLine,
+            tone: 'warning',
+          },
+          {
+            key: 'inflow',
+            label: 'Entradas aprovadas',
+            value: formatBRL(totalInflow),
+            sub: 'Vendas Pix e cartão',
+            icon: TrendingUp,
+            tone: 'success',
+          },
+          {
+            key: 'fees',
+            label: 'Taxas processadas',
+            value: formatBRL(totalFees),
+            sub: 'Tarifas de cartão retidas',
+            icon: Receipt,
+          },
+        ]}
+      />
 
       {/* Extrato Table */}
       <Card>
@@ -196,8 +182,8 @@ export default function WalletPage(_props: Route.ComponentProps) {
             </CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2">
-            <Field className="w-44">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
+            <Field className="w-full sm:w-44">
               <FieldLabel className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <SlidersHorizontal className="size-3.5" />
                 Status
@@ -222,7 +208,7 @@ export default function WalletPage(_props: Route.ComponentProps) {
               </FieldContent>
             </Field>
 
-            <Field className="w-44">
+            <Field className="w-full sm:w-44">
               <FieldLabel className="text-xs font-medium text-muted-foreground">Tipo</FieldLabel>
               <FieldContent>
                 <Select
@@ -243,6 +229,16 @@ export default function WalletPage(_props: Route.ComponentProps) {
                 </Select>
               </FieldContent>
             </Field>
+            {hasFilters ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="justify-self-start"
+              >
+                Limpar filtros
+              </Button>
+            ) : null}
           </div>
         </CardHeader>
 
@@ -251,8 +247,23 @@ export default function WalletPage(_props: Route.ComponentProps) {
             <div className="p-6">
               <EmptyState
                 icon={Receipt}
-                title="Nenhum lançamento encontrado"
-                description="Ajuste os filtros ou aguarde novas movimentações na sua conta."
+                title={
+                  hasFilters
+                    ? 'Nenhum lançamento corresponde aos filtros'
+                    : 'Nenhum lançamento registrado ainda'
+                }
+                description={
+                  hasFilters
+                    ? 'Ajuste ou limpe os filtros para consultar todas as movimentações.'
+                    : 'Os créditos e débitos sincronizados aparecerão aqui.'
+                }
+                action={
+                  hasFilters ? (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Limpar filtros
+                    </Button>
+                  ) : undefined
+                }
               />
             </div>
           ) : (
@@ -288,8 +299,8 @@ export default function WalletPage(_props: Route.ComponentProps) {
                         {tx.description || 'Transação LeraPay'}
                       </TableCell>
                       <TableCell
-                        className={`text-right font-medium ${
-                          isWithdrawal ? 'text-amber-600' : 'text-foreground'
+                        className={`text-right font-medium tabular-nums ${
+                          isWithdrawal ? 'text-warning' : 'text-foreground'
                         }`}
                       >
                         {isWithdrawal ? `- ${formatBRL(tx.amount)}` : `+ ${formatBRL(tx.amount)}`}

@@ -2,11 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import {
-  getAccessToken,
-  getSessionUser,
-  clearSession,
-} from '../lib/auth/token';
+import { getAccessToken, getSessionUser, clearSession } from '../lib/auth/token';
 import { isLocalSessionExpiredError } from '../lib/api/errors';
 import { queryKeys } from '../lib/query/keys';
 import { useMeQuery } from '../lib/queries';
@@ -137,8 +133,8 @@ export default function AppShell() {
     gatewayPending ||
     Boolean(
       gatewayAccount?.isLinked &&
-        gatewayAccount?.tokenExpiresAt &&
-        new Date(gatewayAccount.tokenExpiresAt) < new Date(),
+      gatewayAccount?.tokenExpiresAt &&
+      new Date(gatewayAccount.tokenExpiresAt) < new Date(),
     );
 
   // Client-side auth guard: the JWT lives in localStorage (not a cookie), so SSR
@@ -260,7 +256,10 @@ export default function AppShell() {
                   <DropdownMenuGroup>
                     {isGatewayTokenExpired && (
                       <>
-                        <DropdownMenuItem onClick={() => setLinkOpen(true)} className="text-warning">
+                        <DropdownMenuItem
+                          onClick={() => setLinkOpen(true)}
+                          className="text-warning"
+                        >
                           <ShieldAlert className="text-warning" />
                           Re-autenticar Gateway
                         </DropdownMenuItem>

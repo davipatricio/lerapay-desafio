@@ -27,6 +27,13 @@ import {
 import { useCreatePixPaymentMutation, useCreateCardPaymentMutation } from '../../lib/mutations';
 import type { FeeDto } from '../../lib/api/types';
 import { formatBRL } from '../../lib/money';
+import {
+  detectCardBrand,
+  formatCardNumber,
+  formatExpiryMask,
+  type CardBrand,
+  validateAndNormalizeExpiry,
+} from '../../lib/card-payment';
 import type { Route } from './+types/pay';
 
 export function meta(_: Route.MetaArgs) {
@@ -50,19 +57,6 @@ function formatDocument(val: string): string {
     .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
     .replace(/\.(\d{3})(\d)/, '.$1/$2')
     .replace(/(\d{4})(\d)/, '$1-$2');
-}
-
-function formatCardNumber(val: string): string {
-  const digits = val.replace(/\D/g, '').slice(0, 16);
-  return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-}
-
-function detectBrand(number: string): 'VISA' | 'MASTERCARD' | 'ELO' {
-  const clean = number.replace(/\D/g, '');
-  if (clean.startsWith('4')) return 'VISA';
-  if (/^(5[1-5]|2[2-7])/.test(clean)) return 'MASTERCARD';
-  if (/^(4011|4389|4514|5041|5066|5090|6277|6362|6363|650|6516|6550)/.test(clean)) return 'ELO';
-  return 'VISA';
 }
 
 export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
@@ -108,10 +102,10 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
   // Credit Card state
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState('');
-  const [expiryMonth, setExpiryMonth] = useState('');
-  const [expiryYear, setExpiryYear] = useState('');
+  const [expiryDigits, setExpiryDigits] = useState('');
+  const [expiryError, setExpiryError] = useState('');
   const [cvv, setCvv] = useState('');
-  const [brand, setBrand] = useState<'VISA' | 'MASTERCARD' | 'ELO'>('VISA');
+  const [brand, setBrand] = useState<CardBrand | null>(null);
   const [selectedInstallments, setSelectedInstallments] = useState(1);
 
   // Success screen state
@@ -186,10 +180,42 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
     }
   };
 
-  const handleCardNumberChange = (val: string) => {
-    setCardNumber(formatCardNumber(val));
-    const detected = detectBrand(val);
-    setBrand(detected);
+  const handleCardNumberChange = (value: string) => {
+    setCardNumber(formatCardNumber(value));
+    setBrand(detectCardBrand(value));
+  };
+
+  const handleExpiryChange = (value: string) => {
+    setExpiryDigits(value.replace(/\D/g, '').slice(0, 4));
+    setExpiryError('');
+  };
+
+  const handleExpiryKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      setExpiryDigits((current) => current.slice(0, -1));
+      setExpiryError('');
+      return;
+    }
+
+    if (!/^\d$/.test(event.key)) return;
+
+    event.preventDefault();
+    setExpiryDigits((current) => {
+      const next = `${current}${event.key}`.slice(0, 4);
+      const month = Number(next.slice(0, 2));
+
+      if (next.length === 1 && event.key > '1') {
+        return `0${event.key}`;
+      }
+
+      if (next.length === 2 && (month < 1 || month > 12)) {
+        return current;
+      }
+
+      return next;
+    });
+    setExpiryError('');
   };
 
   const handlePayCard = async (e: React.FormEvent) => {
@@ -207,8 +233,10 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
       return;
     }
 
-    if (!expiryMonth || !expiryYear) {
-      toast.error('Informe o mês e ano de validade');
+    const expiry = validateAndNormalizeExpiry(expiryDigits);
+    if (!expiry.valid) {
+      setExpiryError(expiry.message);
+      toast.error(expiry.message);
       return;
     }
 
@@ -217,11 +245,15 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
       return;
     }
 
+    if (!brand) {
+      toast.error('Não foi possível identificar uma bandeira de cartão compatível.');
+      return;
+    }
+
     // Find fee percentage for brand + installments
     const matchingFee = fees.find(
       (f) =>
-        f.brand.toUpperCase() === brand.toUpperCase() &&
-        Number(f.installments) === Number(selectedInstallments),
+        f.brand.toUpperCase() === brand && Number(f.installments) === Number(selectedInstallments),
     );
 
     const feePercent = matchingFee ? Number(matchingFee.feePercent) : 0;
@@ -231,8 +263,8 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
         amount: link.amount,
         cardNumber: cleanCard,
         cardHolder: cardHolder.trim().toUpperCase(),
-        expiryMonth: expiryMonth.padStart(2, '0'),
-        expiryYear: expiryYear.length === 2 ? `20${expiryYear}` : expiryYear,
+        expiryMonth: expiry.expiryMonth,
+        expiryYear: expiry.expiryYear,
         cvv: cvv.trim(),
         brand,
         installments: selectedInstallments,
@@ -306,7 +338,7 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
   if (paymentSuccess) {
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-8 text-center border-emerald-500/30">
+        <Card className="w-full max-w-md gap-0 py-0 text-center border-emerald-500/30">
           <div className="size-16 bg-emerald-500/10 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="size-10" />
           </div>
@@ -328,9 +360,7 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Forma de pagamento:</span>
-              <span>
-                {paymentSuccess.method === 'PIX' ? 'Pix Instantâneo' : 'Cartão de Crédito'}
-              </span>
+              <span>{paymentSuccess.method === 'PIX' ? 'Pix' : 'Cartão de Crédito'}</span>
             </div>
             <div className="flex justify-between font-mono text-xs">
               <span className="text-muted-foreground">Referência:</span>
@@ -350,7 +380,7 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
 
   // Calculate installment preview options
   const maxInst = link.maxInstallments || 12;
-  const brandFees = fees.filter((f) => f.brand.toUpperCase() === brand.toUpperCase());
+  const brandFees = brand ? fees.filter((f) => f.brand.toUpperCase() === brand) : [];
 
   return (
     <div className="min-h-screen bg-muted/30 py-8 px-4 flex flex-col items-center justify-center">
@@ -373,8 +403,8 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
         </div>
 
         {/* Order Summary Card */}
-        <Card className="border shadow-sm">
-          <CardHeader className="bg-muted/40 pb-4">
+        <Card className="gap-0 py-0 border shadow-sm">
+          <CardHeader className="bg-muted/40 pt-6 pb-4">
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-lg font-bold">{link.title}</CardTitle>
@@ -403,7 +433,7 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
                   }`}
                 >
                   <QrCode className="size-4" />
-                  <span>Pix Instantâneo</span>
+                  <span>Pix</span>
                 </button>
               )}
 
@@ -532,12 +562,17 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
                       placeholder="0000 0000 0000 0000"
                       value={cardNumber}
                       onChange={(e) => handleCardNumberChange(e.target.value)}
-                      maxLength={19}
+                      maxLength={23}
+                      inputMode="numeric"
+                      autoComplete="cc-number"
                       required
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div aria-live="polite" className="absolute right-3 top-1/2 -translate-y-1/2">
                       <Badge variant="secondary" className="text-[10px] font-mono">
-                        {brand}
+                        {brand ??
+                          (cardNumber.replace(/\D/g, '').length >= 6
+                            ? 'NÃO IDENTIFICADA'
+                            : 'IDENTIFICANDO')}
                       </Badge>
                     </div>
                   </div>
@@ -550,33 +585,31 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
                     placeholder="JOAO DA SILVA"
                     value={cardHolder}
                     onChange={(e) => setCardHolder(e.target.value)}
+                    autoComplete="cc-name"
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="expiryMonth">Mês (MM) *</Label>
+                    <Label htmlFor="expiry">Validade (MM/AA) *</Label>
                     <Input
-                      id="expiryMonth"
-                      placeholder="12"
-                      maxLength={2}
-                      value={expiryMonth}
-                      onChange={(e) => setExpiryMonth(e.target.value.replace(/\D/g, ''))}
-                      required
+                      id="expiry"
+                      placeholder="__/__"
+                      value={formatExpiryMask(expiryDigits)}
+                      onChange={(e) => handleExpiryChange(e.target.value)}
+                      onKeyDown={handleExpiryKeyDown}
+                      inputMode="numeric"
+                      autoComplete="cc-exp"
+                      aria-label="Data de validade do cartão, mês e ano"
+                      aria-describedby={expiryError ? 'expiry-error' : undefined}
+                      aria-invalid={Boolean(expiryError)}
                     />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="expiryYear">Ano (AAAA) *</Label>
-                    <Input
-                      id="expiryYear"
-                      placeholder="2028"
-                      maxLength={4}
-                      value={expiryYear}
-                      onChange={(e) => setExpiryYear(e.target.value.replace(/\D/g, ''))}
-                      required
-                    />
+                    {expiryError && (
+                      <p id="expiry-error" role="alert" className="text-xs text-destructive">
+                        {expiryError}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1.5">
@@ -587,6 +620,8 @@ export default function CheckoutPaymentPage(_props: Route.ComponentProps) {
                       maxLength={4}
                       value={cvv}
                       onChange={(e) => setCvv(e.target.value.replace(/\D/g, ''))}
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
                       required
                     />
                   </div>

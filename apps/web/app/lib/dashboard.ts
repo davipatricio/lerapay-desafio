@@ -36,8 +36,11 @@ export const CHECKOUT_STATUS: Record<string, StatusMeta> = {
 export const WITHDRAWAL_STATUS: Record<string, StatusMeta> = {
   PENDING: { label: 'Pendente', tone: 'warning' },
   PROCESSING: { label: 'Processando', tone: 'info' },
+  APPROVED: { label: 'Aprovado', tone: 'success' },
   COMPLETED: { label: 'Concluído', tone: 'success' },
+  DENIED: { label: 'Negado', tone: 'danger' },
   FAILED: { label: 'Falhou', tone: 'danger' },
+  CANCELLED: { label: 'Cancelado', tone: 'neutral' },
 };
 
 /** Payment method / transaction type metadata. */

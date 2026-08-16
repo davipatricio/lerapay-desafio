@@ -7,23 +7,22 @@ import { ErrorState } from './error-state';
 interface ErrorBoundaryProps {
   children: ReactNode;
   onReset?: () => void;
+  compact?: boolean;
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean;
+  error: unknown | null;
 }
 
 /**
  * Class error boundary that catches render/query errors thrown below it and
- * shows a friendly retryable state instead of a blank or crashed section.
- * The optional `onReset` lets the boundary clear cached errors (e.g. via a
- * query client reset) when the user retries.
+ * shows a safe retryable state instead of a blank or crashed section.
  */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+  state: ErrorBoundaryState = { error: null };
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
+    return { error };
   }
 
   componentDidCatch(error: unknown) {
@@ -31,13 +30,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   private handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState({ error: null });
     this.props.onReset?.();
   };
 
   render() {
-    if (this.state.hasError) {
-      return <ErrorState onRetry={this.props.onReset ? this.handleRetry : undefined} />;
+    if (this.state.error) {
+      return (
+        <ErrorState
+          error={this.state.error}
+          compact={this.props.compact}
+          onRetry={this.props.onReset ? this.handleRetry : undefined}
+        />
+      );
     }
     return this.props.children;
   }

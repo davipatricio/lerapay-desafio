@@ -156,6 +156,43 @@ describe('PaymentsService', () => {
     expect(result).toMatchObject({ status: 'APPROVED', fee: 313, netAmount: 12_187 });
   });
 
+  it('reads nested gateway fee summaries and never persists NaN totals', async () => {
+    const link = activeCheckoutLink();
+    checkoutService.findById.mockResolvedValue(link);
+    gatewayService.createCardPayment.mockResolvedValue({
+      success: false,
+      transactionId: undefined,
+      fee: {
+        brand: 'MASTERCARD',
+        feeAmount: 3,
+        netAmount: 97,
+      },
+      netAmount: Number.NaN,
+    });
+
+    const result = await service.createCardPayment({
+      checkoutLinkId: link.id,
+      amount: link.amount,
+      cardNumber: '5555 5555 5555 4444',
+      cardHolder: 'Ana Silva',
+      expiryMonth: '03',
+      expiryYear: '2030',
+      cvv: '123',
+      brand: 'MASTERCARD',
+      installments: 1,
+      feePercent: 2.69,
+    });
+
+    expect(orderRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'DENIED',
+        feeAmount: 3,
+        netAmount: 97,
+      }),
+    );
+    expect(result).toMatchObject({ status: 'DENIED', fee: 3, netAmount: 97 });
+  });
+
   it('rejects public payments without a checkout link', async () => {
     await expect(
       service.createPixPayment({ amount: 1000, payerDocument: '12345678901' }),

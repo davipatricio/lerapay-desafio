@@ -16,6 +16,8 @@ const toneClasses: Record<StatusTone, string> = {
 export interface SummaryItem {
   /** Stable key, used as React key. */
   key: string;
+  /** Visually emphasizes a primary metric without changing its type scale. */
+  featured?: boolean;
   label: React.ReactNode;
   value: React.ReactNode;
   /** Secondary line (e.g. a delta, a period, or "vs. ontem"). */
@@ -54,18 +56,29 @@ export function SummaryStrip({ items, columns, className, ...props }: SummaryStr
         const positive = item.trend?.positive ?? item.trend?.direction === 'up';
         const TrendIcon = item.trend?.direction === 'up' ? TrendingUp : TrendingDown;
         return (
-          <Card key={item.key} data-slot="summary-item" size="sm">
+          <Card
+            key={item.key}
+            data-slot="summary-item"
+            size="sm"
+            className={item.featured ? 'border-primary/20 bg-primary/5' : undefined}
+          >
             <CardContent className="flex items-start justify-between gap-3">
               <div className="grid min-w-0 gap-1">
                 <div
                   data-slot="summary-label"
-                  className="truncate text-xs font-medium text-muted-foreground"
+                  className={cn(
+                    'truncate text-xs font-medium text-muted-foreground',
+                    item.featured && 'text-primary',
+                  )}
                 >
                   {item.label}
                 </div>
                 <div
                   data-slot="summary-value"
-                  className="truncate font-mono text-xl font-semibold tracking-tight text-foreground tabular-nums"
+                  className={cn(
+                    'truncate font-mono text-xl font-semibold tracking-tight text-foreground tabular-nums',
+                    item.featured && 'text-primary',
+                  )}
                 >
                   {item.value}
                 </div>
