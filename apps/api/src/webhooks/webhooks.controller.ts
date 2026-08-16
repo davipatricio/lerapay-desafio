@@ -8,9 +8,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
   UseGuards,
+  type RawBodyRequest,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Request } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { User } from '../users/entities/user.entity';
@@ -61,13 +64,20 @@ export class WebhooksController {
   @ApiHeader({
     name: 'x-lera-box-signature',
     required: false,
-    description: 'HMAC SHA-256 signature generated with the webhook secret',
+    description:
+      'HMAC SHA-256 signature generated with the webhook secret (required when GATEWAY_WEBHOOK_SECRET is configured)',
   })
   @ApiResponse({ status: 200, description: 'Webhook event processed and acknowledged' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or missing signature / malformed payload',
+  })
   public async handleGatewayWebhook(
+    @Req() req: RawBodyRequest<Request>,
     @Body() payload: GatewayWebhookDto,
     @Headers('x-lera-box-signature') signature?: string,
   ) {
-    return this.webhooksService.handleIncomingWebhook(payload, signature);
+    const rawBody = req.rawBody?.toString('utf-8');
+    return this.webhooksService.handleIncomingWebhook(payload, signature, rawBody);
   }
 }

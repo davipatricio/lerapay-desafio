@@ -40,7 +40,6 @@ export class CheckoutService {
   public async findById(id: string): Promise<CheckoutLink> {
     const link = await this.checkoutLinkRepository.findOne({
       where: { id },
-      relations: { user: true },
     });
 
     if (!link) {

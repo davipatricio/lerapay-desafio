@@ -72,9 +72,17 @@ export class WebhooksService {
 
     // Verify HMAC SHA-256 signature if secret is configured
     const webhookSecret = this.configService.get<string>('GATEWAY_WEBHOOK_SECRET');
-    if (webhookSecret && signature) {
+    if (webhookSecret) {
+      if (!signature) {
+        this.logger.warn(`Missing signature for webhook event ${eventId}`);
+        throw new BadRequestException('Missing webhook signature');
+      }
+      if (!rawBody) {
+        this.logger.warn(`Missing raw body for webhook event ${eventId}`);
+        throw new BadRequestException('Missing raw body for signature verification');
+      }
       const isValid = await this.gatewayService.verifyWebhookSignature(
-        rawBody || JSON.stringify(payload),
+        rawBody,
         signature,
         webhookSecret,
       );

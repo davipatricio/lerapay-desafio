@@ -20,7 +20,8 @@ export class CreatePixPaymentDto {
 
   @ApiPropertyOptional({
     example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    description: 'Checkout Link ID',
+    description:
+      'Checkout Link ID. When provided, the server enforces its active status, expiration, allowed method, fixed amount, and reconciliation reference.',
   })
   @IsOptional()
   @IsString()
