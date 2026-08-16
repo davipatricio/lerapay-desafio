@@ -2,6 +2,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { formatValidationErrors } from './common/validation';
 
@@ -36,7 +37,10 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup('docs', app, document, {
+    // Vercel cannot reliably trace Swagger's runtime asset lookup through pnpm.
+    customSwaggerUiPath: join(__dirname, 'swagger-ui'),
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
