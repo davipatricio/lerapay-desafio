@@ -1,6 +1,7 @@
 services:
   mysql:
     image: mysql:8.4
+    container_name: lerapay-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -11,11 +12,65 @@ services:
       - '3306:3306'
     volumes:
       - mysql_data:/var/lib/mysql
+    networks:
+      - lerapay-network
     healthcheck:
       test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: lerapay-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: app
+      DB_PASSWORD: app
+      DB_NAME: app
+      RUN_MIGRATIONS: 'true'
+      JWT_SECRET: ${JWT_SECRET:-lerapay-baas-segredo-desafio-tecnico}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      GATEWAY_BASE_URL: ${GATEWAY_BASE_URL:-https://api.branchpay.com.br/api}
+      GATEWAY_TIMEOUT: ${GATEWAY_TIMEOUT:-10000}
+      GATEWAY_WEBHOOK_SECRET: ${GATEWAY_WEBHOOK_SECRET:-}
+    ports:
+      - '3000:3000'
+    networks:
+      - lerapay-network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    container_name: lerapay-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      PORT: 5173
+      API_INTERNAL_URL: http://api:3000/api
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - '5173:5173'
+    networks:
+      - lerapay-network
 
 volumes:
   mysql_data:
+
+networks:
+  lerapay-network:
+    driver: bridge
