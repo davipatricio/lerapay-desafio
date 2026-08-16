@@ -12,6 +12,9 @@ export function isGatewayTokenRejection(error: unknown): boolean {
   const message = error.message.toLowerCase();
   return (
     message.includes('token') &&
-    (message.includes('inválido') || message.includes('expirado') || message.includes('invalid') || message.includes('expired'))
+    (message.includes('inválido') ||
+      message.includes('expirado') ||
+      message.includes('invalid') ||
+      message.includes('expired'))
   );
 }

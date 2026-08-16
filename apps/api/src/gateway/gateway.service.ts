@@ -90,10 +90,7 @@ export class GatewayService {
     return verifyWebhookSignature(payload, signature, secret);
   }
 
-  public withMerchantToken<T>(
-    user: User,
-    operation: (token: string) => Promise<T>,
-  ): Promise<T> {
+  public withMerchantToken<T>(user: User, operation: (token: string) => Promise<T>): Promise<T> {
     return this.withMerchantTokenByUserId(user.id, operation);
   }
 

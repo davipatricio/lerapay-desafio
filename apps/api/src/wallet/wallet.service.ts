@@ -9,7 +9,9 @@ export class WalletService {
   constructor(private readonly gatewayService: GatewayService) {}
 
   public async getWallet(user: User): Promise<WalletResponse> {
-    return this.gatewayService.withMerchantToken(user, (token) => this.gatewayService.getWallet(token));
+    return this.gatewayService.withMerchantToken(user, (token) =>
+      this.gatewayService.getWallet(token),
+    );
   }
 
   public async listTransactions(
