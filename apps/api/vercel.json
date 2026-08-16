@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
-    "src/main.ts": {
+    "api/index.ts": {
       "includeFiles": "dist/swagger-ui/**"
     }
   }

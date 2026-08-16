@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { formatValidationErrors } from './common/validation';
 
-async function bootstrap() {
+export async function createApp() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
   });
@@ -42,7 +42,15 @@ async function bootstrap() {
     customSwaggerUiPath: join(__dirname, 'swagger-ui'),
   });
 
+  await app.init();
+  return app;
+}
+
+async function bootstrap() {
+  const app = await createApp();
   await app.listen(process.env.PORT ?? 3000);
 }
 
-void bootstrap();
+if (require.main === module) {
+  void bootstrap();
+}
