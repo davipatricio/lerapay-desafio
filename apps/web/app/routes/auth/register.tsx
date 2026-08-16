@@ -9,6 +9,7 @@ import { queryKeys } from '../../lib/query/keys';
 import { setAccessToken, setSessionUser } from '../../lib/auth/token';
 import { ApiClientError } from '../../lib/api/errors';
 import { CepLookupError, lookupCep } from '../../lib/cep';
+import { formatCep, formatPhone, formatDocument, stripNonDigits } from '../../lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,11 +26,19 @@ const registerSchema = z.object({
   personType: z.enum(['PF', 'PJ']),
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Informe um e-mail válido'),
-  document: z.string().min(11, 'Informe um CPF ou CNPJ válido'),
-  phone: z.string().min(10, 'Informe um telefone com DDD válido'),
+  document: z.string().refine((val) => {
+    const digits = stripNonDigits(val);
+    return digits.length === 11 || digits.length === 14;
+  }, 'Informe um CPF (11 dígitos) ou CNPJ (14 dígitos) válido'),
+  phone: z.string().refine((val) => {
+    const digits = stripNonDigits(val);
+    return digits.length >= 10 && digits.length <= 11;
+  }, 'Informe um telefone com DDD válido'),
   password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
   tradingName: z.string().optional(),
-  zipCode: z.string().regex(/^\d{5}-?\d{3}$/, 'Informe um CEP válido com 8 dígitos'),
+  zipCode: z.string().refine((val) => {
+    return stripNonDigits(val).length === 8;
+  }, 'Informe um CEP válido com 8 dígitos'),
   address: z.string().trim().min(1, 'Informe o logradouro'),
   number: z.string().trim().min(1, 'Informe o número'),
   neighborhood: z.string().trim().min(1, 'Informe o bairro'),
@@ -76,9 +85,9 @@ export default function Register() {
       setErrorMessage(null);
       try {
         // Strip non-digits from document, phone, and zipCode
-        const cleanedDoc = value.document.replace(/\D/g, '');
-        const cleanedPhone = value.phone.replace(/\D/g, '');
-        const cleanedZip = value.zipCode.replace(/\D/g, '');
+        const cleanedDoc = stripNonDigits(value.document);
+        const cleanedPhone = stripNonDigits(value.phone);
+        const cleanedZip = stripNonDigits(value.zipCode);
 
         const payload = {
           name: value.name.trim(),
@@ -123,14 +132,15 @@ export default function Register() {
     cepRequest.current = controller;
     setCepError(null);
 
-    if (cep.replace(/\D/g, '').length !== 8) {
+    const digits = stripNonDigits(cep);
+    if (digits.length !== 8) {
       setCepLoading(false);
       return;
     }
 
     setCepLoading(true);
     try {
-      const address = await lookupCep(cep, controller.signal);
+      const address = await lookupCep(digits, controller.signal);
       form.setFieldValue('address', address.address);
       form.setFieldValue('neighborhood', address.neighborhood);
       form.setFieldValue('city', address.city);
@@ -172,7 +182,14 @@ export default function Register() {
                   <Label>Tipo de Cadastro</Label>
                   <Tabs
                     value={field.state.value}
-                    onValueChange={(val) => field.handleChange(val as 'PF' | 'PJ')}
+                    onValueChange={(val) => {
+                      const nextType = val as 'PF' | 'PJ';
+                      field.handleChange(nextType);
+                      const currentDoc = form.getFieldValue('document');
+                      if (currentDoc) {
+                        form.setFieldValue('document', formatDocument(currentDoc, nextType));
+                      }
+                    }}
                     className="w-full"
                   >
                     <TabsList className="grid w-full grid-cols-2">
@@ -253,8 +270,12 @@ export default function Register() {
                 name="document"
                 validators={{
                   onChange: ({ value }: { value: string }) => {
-                    const digits = value.replace(/\D/g, '');
-                    return digits.length >= 11 ? undefined : 'Documento inválido';
+                    const digits = stripNonDigits(value);
+                    const isPJ = form.getFieldValue('personType') === 'PJ';
+                    if (isPJ) {
+                      return digits.length === 14 ? undefined : 'CNPJ deve conter 14 dígitos';
+                    }
+                    return digits.length === 11 ? undefined : 'CPF deve conter 11 dígitos';
                   },
                 }}
               >
@@ -267,9 +288,14 @@ export default function Register() {
                         id={field.name}
                         name={field.name}
                         type="text"
+                        inputMode="numeric"
+                        maxLength={isPJ ? 18 : 14}
                         placeholder={isPJ ? '00.000.000/0001-00' : '000.000.000-00'}
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          const formatted = formatDocument(e.target.value, isPJ ? 'PJ' : 'PF');
+                          field.handleChange(formatted);
+                        }}
                         onBlur={field.handleBlur}
                         aria-invalid={
                           field.state.meta.isTouched && field.state.meta.errors.length > 0
@@ -287,8 +313,10 @@ export default function Register() {
                 name="phone"
                 validators={{
                   onChange: ({ value }: { value: string }) => {
-                    const digits = value.replace(/\D/g, '');
-                    return digits.length >= 10 ? undefined : 'Informe telefone com DDD';
+                    const digits = stripNonDigits(value);
+                    return digits.length >= 10 && digits.length <= 11
+                      ? undefined
+                      : 'Informe telefone com DDD (10 ou 11 dígitos)';
                   },
                 }}
               >
@@ -299,9 +327,14 @@ export default function Register() {
                       id={field.name}
                       name={field.name}
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={15}
                       placeholder="(11) 98765-4321"
                       value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => {
+                        const formatted = formatPhone(e.target.value);
+                        field.handleChange(formatted);
+                      }}
                       onBlur={field.handleBlur}
                       aria-invalid={
                         field.state.meta.isTouched && field.state.meta.errors.length > 0
@@ -399,7 +432,15 @@ export default function Register() {
               {showAddress ? (
                 <div className="mt-4 flex flex-col gap-3">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <form.AppField name="zipCode">
+                    <form.AppField
+                      name="zipCode"
+                      validators={{
+                        onChange: ({ value }: { value: string }) => {
+                          const digits = stripNonDigits(value);
+                          return digits.length === 8 ? undefined : 'CEP deve conter 8 dígitos';
+                        },
+                      }}
+                    >
                       {(field) => (
                         <div className="flex flex-col gap-1.5 sm:col-span-1">
                           <Label htmlFor={field.name} className="text-xs">
@@ -417,19 +458,30 @@ export default function Register() {
                             value={field.state.value || ''}
                             onChange={(e) => {
                               cepRequest.current?.abort();
-                              field.handleChange(e.target.value);
+                              const formatted = formatCep(e.target.value);
+                              field.handleChange(formatted);
                               setCepLoading(false);
                               setCepError(null);
+                              const digits = stripNonDigits(formatted);
+                              if (digits.length === 8) {
+                                void handleCepLookup(digits);
+                              }
                             }}
                             onBlur={(e) => {
                               field.handleBlur();
                               void handleCepLookup(e.target.value);
                             }}
+                            aria-invalid={
+                              field.state.meta.isTouched && field.state.meta.errors.length > 0
+                            }
                           />
                           {cepLoading ? (
                             <p className="text-xs text-muted-foreground">Consultando CEP...</p>
                           ) : null}
                           {cepError ? <p className="text-xs text-destructive">{cepError}</p> : null}
+                          {field.state.meta.isTouched && field.state.meta.errors.length > 0 ? (
+                            <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>
+                          ) : null}
                         </div>
                       )}
                     </form.AppField>
