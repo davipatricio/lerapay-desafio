@@ -53,17 +53,17 @@ Copy `.env.example` to `.env` for local runs. Defaults point at the Dockerized M
 
 Run from this package via `pnpm --filter @lerapay/api <script>` (or `turbo run <script> --filter @lerapay/api`):
 
-| Script | Command | Purpose |
-| --- | --- | --- |
-| `dev` | `nest start --watch` | Start with file watching |
-| `build` | `nest build` | Compile to `dist/` |
-| `start` | `nest start` | Run once |
-| `start:prod` | `node dist/main.js` | Run compiled output |
-| `typecheck` | `tsc --noEmit` | Type-check (no emit) |
-| `lint` | `oxlint .` | Lint with oxlint |
-| `lint:fix` | `oxlint . --fix` | Auto-fix lint issues |
-| `format` | `oxfmt .` | Format with oxfmt |
-| `format:check` | `oxfmt --check .` | Verify formatting |
+| Script         | Command              | Purpose                  |
+| -------------- | -------------------- | ------------------------ |
+| `dev`          | `nest start --watch` | Start with file watching |
+| `build`        | `nest build`         | Compile to `dist/`       |
+| `start`        | `nest start`         | Run once                 |
+| `start:prod`   | `node dist/main.js`  | Run compiled output      |
+| `typecheck`    | `tsc --noEmit`       | Type-check (no emit)     |
+| `lint`         | `oxlint .`           | Lint with oxlint         |
+| `lint:fix`     | `oxlint . --fix`     | Auto-fix lint issues     |
+| `format`       | `oxfmt .`            | Format with oxfmt        |
+| `format:check` | `oxfmt --check .`    | Verify formatting        |
 
 Linting/formatting use `oxlint`/`oxfmt` (not ESLint/Prettier), per the monorepo standard.
 
@@ -79,3 +79,6 @@ The full OpenAPI 3.0.0 contract for the simulated gateway (all `/api/*` routes, 
 security scheme, and the request DTO schemas) is kept as reference documentation at
 [`docs/gateway.md`](./docs/gateway.md). It mirrors the live Swagger UI and is the source of truth
 for integrators — when changing a route, its security, or a DTO, keep that file in sync.
+
+Integration with this API is performed via the shared workspace package [`@lerapay/gateway-sdk`](../../packages/gateway-sdk),
+which exports `BranchPayClient`, typed DTO interfaces, `BranchPayError`, and `verifyWebhookSignature`.
