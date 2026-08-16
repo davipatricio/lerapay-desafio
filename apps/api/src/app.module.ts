@@ -20,21 +20,34 @@ import { validateEnvironment } from './config/env.validation';
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        autoLoadEntities: true,
-        database: config.get<string>('DB_NAME', 'app'),
-        // Keep mysql2 statically reachable for serverless bundlers; TypeORM otherwise
-        // resolves it through a dynamic require that Vercel cannot trace.
-        driver: mysql,
-        host: config.get<string>('DB_HOST', 'localhost'),
-        migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        migrationsRun: true,
-        password: config.get<string>('DB_PASSWORD', 'app'),
-        port: config.get<number>('DB_PORT', 3306),
-        synchronize: false,
-        type: 'mysql',
-        username: config.get<string>('DB_USER', 'app'),
-      }),
+      useFactory: (config: ConfigService) => {
+        const isSsl =
+          config.get<string>('DB_SSL') === 'true' ||
+          config.get<string>('DB_SSL') === '1' ||
+          config.get<string>('DB_SSL_MODE') === 'REQUIRED' ||
+          config.get<string>('DB_SSL_MODE') === 'required';
+
+        return {
+          autoLoadEntities: true,
+          database: config.get<string>('DB_NAME', 'app'),
+          // Keep mysql2 statically reachable for serverless bundlers; TypeORM otherwise
+          // resolves it through a dynamic require that Vercel cannot trace.
+          driver: mysql,
+          host: config.get<string>('DB_HOST', 'localhost'),
+          migrations: [__dirname + '/migrations/*{.ts,.js}'],
+          migrationsRun: true,
+          password: config.get<string>('DB_PASSWORD', 'app'),
+          port: config.get<number>('DB_PORT', 3306),
+          ssl: isSsl
+            ? {
+                rejectUnauthorized: config.get<string>('DB_SSL_REJECT_UNAUTHORIZED') === 'true',
+              }
+            : undefined,
+          synchronize: false,
+          type: 'mysql',
+          username: config.get<string>('DB_USER', 'app'),
+        };
+      },
     }),
     RequestContextModule,
     GatewayModule,
