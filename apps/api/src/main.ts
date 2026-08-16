@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'node:path';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { AppModule } from './app.module';
 import { formatValidationErrors } from './common/validation';
 
@@ -44,6 +45,15 @@ export async function createApp() {
 
   await app.init();
   return app;
+}
+
+let appPromise: ReturnType<typeof createApp> | undefined;
+
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  const app = (appPromise ??= createApp());
+  const initializedApp = await app;
+  const express = initializedApp.getHttpAdapter().getInstance();
+  express(req, res);
 }
 
 async function bootstrap() {
