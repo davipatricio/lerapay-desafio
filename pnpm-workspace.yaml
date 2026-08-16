@@ -4,11 +4,17 @@ packages:
 
 allowBuilds:
   '@scarf/scarf': false
+  '@swc/core': true
 
 catalog:
+  '@swc/core': 1.16.0
   '@types/node': 26.2.0
+  '@vitest/coverage-v8': 4.1.10
   oxfmt: 0.63.0
   oxlint: 1.78.0
+  unplugin-swc: 1.5.11
+  vite: 8.2.1
+  vitest: 4.1.10
 
 catalogs:
   frontend:

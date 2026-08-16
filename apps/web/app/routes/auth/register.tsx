@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { useRegisterMutation } from '../../lib/mutations/auth';
 import { queryKeys } from '../../lib/query/keys';
 import { setAccessToken, setSessionUser } from '../../lib/auth/token';
 import { ApiClientError } from '../../lib/api/errors';
+import { CepLookupError, lookupCep } from '../../lib/cep';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,12 +29,12 @@ const registerSchema = z.object({
   phone: z.string().min(10, 'Informe um telefone com DDD válido'),
   password: z.string().min(6, 'A senha deve ter no mínimo 6 caracteres'),
   tradingName: z.string().optional(),
-  zipCode: z.string().optional(),
-  address: z.string().optional(),
-  number: z.string().optional(),
-  neighborhood: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
+  zipCode: z.string().regex(/^\d{5}-?\d{3}$/, 'Informe um CEP válido com 8 dígitos'),
+  address: z.string().trim().min(1, 'Informe o logradouro'),
+  number: z.string().trim().min(1, 'Informe o número'),
+  neighborhood: z.string().trim().min(1, 'Informe o bairro'),
+  city: z.string().trim().min(1, 'Informe a cidade'),
+  state: z.string().regex(/^[A-Za-z]{2}$/, 'Informe a UF com 2 letras'),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -42,7 +43,10 @@ export default function Register() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showAddress, setShowAddress] = useState(false);
+  const [showAddress, setShowAddress] = useState(true);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string | null>(null);
+  const cepRequest = useRef<AbortController | null>(null);
 
   const registerMutation = useRegisterMutation();
 
@@ -74,7 +78,7 @@ export default function Register() {
         // Strip non-digits from document, phone, and zipCode
         const cleanedDoc = value.document.replace(/\D/g, '');
         const cleanedPhone = value.phone.replace(/\D/g, '');
-        const cleanedZip = value.zipCode ? value.zipCode.replace(/\D/g, '') : undefined;
+        const cleanedZip = value.zipCode.replace(/\D/g, '');
 
         const payload = {
           name: value.name.trim(),
@@ -86,12 +90,12 @@ export default function Register() {
           ...(value.personType === 'PJ' && value.tradingName?.trim()
             ? { tradingName: value.tradingName.trim() }
             : {}),
-          ...(cleanedZip ? { zipCode: cleanedZip } : {}),
-          ...(value.address?.trim() ? { address: value.address.trim() } : {}),
-          ...(value.number?.trim() ? { number: value.number.trim() } : {}),
-          ...(value.neighborhood?.trim() ? { neighborhood: value.neighborhood.trim() } : {}),
-          ...(value.city?.trim() ? { city: value.city.trim() } : {}),
-          ...(value.state?.trim() ? { state: value.state.trim().toUpperCase() } : {}),
+          zipCode: cleanedZip,
+          address: value.address.trim(),
+          number: value.number.trim(),
+          neighborhood: value.neighborhood.trim(),
+          city: value.city.trim(),
+          state: value.state.trim().toUpperCase(),
           autoRegisterGateway: true,
         };
 
@@ -112,6 +116,38 @@ export default function Register() {
       }
     },
   });
+
+  const handleCepLookup = async (cep: string) => {
+    cepRequest.current?.abort();
+    const controller = new AbortController();
+    cepRequest.current = controller;
+    setCepError(null);
+
+    if (cep.replace(/\D/g, '').length !== 8) {
+      setCepLoading(false);
+      return;
+    }
+
+    setCepLoading(true);
+    try {
+      const address = await lookupCep(cep, controller.signal);
+      form.setFieldValue('address', address.address);
+      form.setFieldValue('neighborhood', address.neighborhood);
+      form.setFieldValue('city', address.city);
+      form.setFieldValue('state', address.state);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      setCepError(
+        error instanceof CepLookupError
+          ? error.message
+          : 'Não foi possível consultar o CEP agora. Você pode preencher o endereço manualmente.',
+      );
+    } finally {
+      if (cepRequest.current === controller) {
+        setCepLoading(false);
+      }
+    }
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-4 py-8">
@@ -342,7 +378,7 @@ export default function Register() {
               </form.AppField>
             </div>
 
-            {/* Collapsible Address Section */}
+            {/* Required commercial address with ViaCEP autofill */}
             <div className="rounded-lg border p-3">
               <button
                 type="button"
@@ -351,7 +387,7 @@ export default function Register() {
               >
                 <span className="flex items-center gap-2">
                   <MapPin className="size-4" />
-                  Endereço comercial (opcional)
+                  Endereço comercial (obrigatório)
                 </span>
                 {showAddress ? (
                   <ChevronUp className="size-4" />
@@ -374,10 +410,26 @@ export default function Register() {
                             name={field.name}
                             type="text"
                             placeholder="01001-000"
+                            autoComplete="postal-code"
+                            inputMode="numeric"
+                            maxLength={9}
+                            required
                             value={field.state.value || ''}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
+                            onChange={(e) => {
+                              cepRequest.current?.abort();
+                              field.handleChange(e.target.value);
+                              setCepLoading(false);
+                              setCepError(null);
+                            }}
+                            onBlur={(e) => {
+                              field.handleBlur();
+                              void handleCepLookup(e.target.value);
+                            }}
                           />
+                          {cepLoading ? (
+                            <p className="text-xs text-muted-foreground">Consultando CEP...</p>
+                          ) : null}
+                          {cepError ? <p className="text-xs text-destructive">{cepError}</p> : null}
                         </div>
                       )}
                     </form.AppField>
@@ -393,6 +445,8 @@ export default function Register() {
                             name={field.name}
                             type="text"
                             placeholder="Rua, Avenida, etc."
+                            autoComplete="street-address"
+                            required
                             value={field.state.value || ''}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onBlur={field.handleBlur}
@@ -414,6 +468,8 @@ export default function Register() {
                             name={field.name}
                             type="text"
                             placeholder="123"
+                            autoComplete="address-line2"
+                            required
                             value={field.state.value || ''}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onBlur={field.handleBlur}
@@ -433,6 +489,8 @@ export default function Register() {
                             name={field.name}
                             type="text"
                             placeholder="Centro"
+                            autoComplete="address-level3"
+                            required
                             value={field.state.value || ''}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onBlur={field.handleBlur}
@@ -452,6 +510,8 @@ export default function Register() {
                             name={field.name}
                             type="text"
                             placeholder="São Paulo"
+                            autoComplete="address-level2"
+                            required
                             value={field.state.value || ''}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onBlur={field.handleBlur}
@@ -472,6 +532,8 @@ export default function Register() {
                             type="text"
                             maxLength={2}
                             placeholder="SP"
+                            autoComplete="address-level1"
+                            required
                             value={field.state.value || ''}
                             onChange={(e) => field.handleChange(e.target.value.toUpperCase())}
                             onBlur={field.handleBlur}

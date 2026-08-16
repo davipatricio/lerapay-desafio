@@ -296,7 +296,7 @@ export default function AppShell() {
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
           <SidebarTrigger />
-          <Separator orientation="vertical" className="h-5" />
+          <Separator orientation="vertical" className="h-full" />
           <Breadcrumb className="min-w-0">
             <BreadcrumbList>
               <BreadcrumbItem>

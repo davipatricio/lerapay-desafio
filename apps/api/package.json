@@ -11,6 +11,10 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --project tsconfig.spec.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "migration:create": "typeorm -d dist/data-source.js migration:create",
     "migration:generate": "typeorm -d dist/data-source.js migration:generate",
     "migration:run": "typeorm -d dist/data-source.js migration:run",
@@ -36,12 +40,17 @@
   },
   "devDependencies": {
     "@nestjs/cli": "11.0.24",
+    "@swc/core": "catalog:",
     "@types/bcryptjs": "^3.0.0",
     "@types/express": "5.0.6",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "dotenv": "^17.4.2",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:backend"
+    "typescript": "catalog:backend",
+    "unplugin-swc": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }

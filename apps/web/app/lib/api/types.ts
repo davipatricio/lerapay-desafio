@@ -76,12 +76,12 @@ export interface RegisterRequest {
   phone: string;
   personType?: 'PF' | 'PJ';
   tradingName?: string;
-  zipCode?: string;
-  address?: string;
-  number?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
+  zipCode: string;
+  address: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
   autoRegisterGateway?: boolean;
 }
 

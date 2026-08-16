@@ -51,6 +51,12 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const zipCode = dto.zipCode.replace(/\D/g, '');
+    const address = dto.address.trim();
+    const number = dto.number.trim();
+    const neighborhood = dto.neighborhood.trim();
+    const city = dto.city.trim();
+    const state = dto.state.trim().toUpperCase();
 
     const user = await this.usersService.create({
       name: dto.name.trim(),
@@ -82,12 +88,12 @@ export class AuthService {
           email: dto.email.toLowerCase().trim(),
           phone: dto.phone.trim(),
           document: cleanDocument,
-          zipCode: dto.zipCode || '01001000',
-          address: dto.address || 'Praça da Sé',
-          number: dto.number || '1',
-          neighborhood: dto.neighborhood || 'Centro',
-          city: dto.city || 'São Paulo',
-          state: dto.state || 'SP',
+          zipCode,
+          address,
+          number,
+          neighborhood,
+          city,
+          state,
         });
         gatewayMessage = gatewayRes.message;
 

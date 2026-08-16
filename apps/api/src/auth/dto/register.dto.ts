@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MinLength,
 } from 'class-validator';
 
@@ -55,36 +56,40 @@ export class RegisterDto {
   @IsString()
   tradingName?: string;
 
-  // Campos de endereço para cadastro automático no gateway Lera Box
-  @ApiPropertyOptional({ example: '01001000', description: 'CEP (apenas dígitos)' })
-  @IsOptional()
+  // Campos de endereço obrigatórios para cadastro no gateway Lera Box
+  @ApiProperty({ example: '01001000', description: 'CEP (8 dígitos, com ou sem pontuação)' })
   @IsString()
-  zipCode?: string;
+  @Matches(/^\d{5}-?\d{3}$/, { message: 'CEP deve conter 8 dígitos' })
+  zipCode: string;
 
-  @ApiPropertyOptional({ example: 'Praça da Sé', description: 'Logradouro / Endereço' })
-  @IsOptional()
+  @ApiProperty({ example: 'Praça da Sé', description: 'Logradouro / Endereço' })
   @IsString()
-  address?: string;
+  @IsNotEmpty()
+  @Matches(/\S/, { message: 'Logradouro não pode ficar vazio' })
+  address: string;
 
-  @ApiPropertyOptional({ example: '100', description: 'Número do endereço' })
-  @IsOptional()
+  @ApiProperty({ example: '100', description: 'Número do endereço' })
   @IsString()
-  number?: string;
+  @IsNotEmpty()
+  @Matches(/\S/, { message: 'Número não pode ficar vazio' })
+  number: string;
 
-  @ApiPropertyOptional({ example: 'Sé', description: 'Bairro' })
-  @IsOptional()
+  @ApiProperty({ example: 'Sé', description: 'Bairro' })
   @IsString()
-  neighborhood?: string;
+  @IsNotEmpty()
+  @Matches(/\S/, { message: 'Bairro não pode ficar vazio' })
+  neighborhood: string;
 
-  @ApiPropertyOptional({ example: 'São Paulo', description: 'Cidade / Município' })
-  @IsOptional()
+  @ApiProperty({ example: 'São Paulo', description: 'Cidade / Município' })
   @IsString()
-  city?: string;
+  @IsNotEmpty()
+  @Matches(/\S/, { message: 'Cidade não pode ficar vazia' })
+  city: string;
 
-  @ApiPropertyOptional({ example: 'SP', description: 'Sigla do Estado (UF)' })
-  @IsOptional()
+  @ApiProperty({ example: 'SP', description: 'Sigla do Estado (UF)' })
   @IsString()
-  state?: string;
+  @Matches(/^[A-Za-z]{2}$/, { message: 'Estado deve ser informado com 2 letras' })
+  state: string;
 
   @ApiPropertyOptional({
     default: true,

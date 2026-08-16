@@ -1,32 +1,19 @@
 {
   "name": "@lerapay/monorepo",
   "private": true,
-  "packageManager": "pnpm@11.21.0",
-  "engines": {
-    "node": ">=26.7.0"
-  },
-  "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
-    "format": "turbo run format",
-    "format:check": "turbo run format:check",
-    "typecheck": "turbo run typecheck"
-  },
-  "devDependencies": {
-    "oxfmt": "catalog:",
-    "oxlint": "catalog:",
-    "turbo": "2.10.10"
-  },
   "workspaces": {
     "packages": [
       "apps/*"
     ],
     "catalog": {
+      "@swc/core": "1.16.0",
       "@types/node": "26.2.0",
+      "@vitest/coverage-v8": "4.1.10",
       "oxfmt": "0.63.0",
-      "oxlint": "1.78.0"
+      "oxlint": "1.78.0",
+      "unplugin-swc": "1.5.11",
+      "vite": "8.2.1",
+      "vitest": "4.1.10"
     },
     "catalogs": {
       "frontend": {
@@ -36,5 +23,24 @@
         "typescript": "6.0.3"
       }
     }
-  }
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "turbo": "2.10.10"
+  },
+  "engines": {
+    "node": ">=26.7.0"
+  },
+  "packageManager": "pnpm@11.21.0"
 }
