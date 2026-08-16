@@ -53,14 +53,14 @@ No `.env` required for local dev. The SDK is framework-agnostic and can be consu
 
 Run from this package via `pnpm --filter @lerapay/gateway-sdk <script>` (or `turbo run <script> --filter @lerapay/gateway-sdk`):
 
-| Script | Command | Purpose |
-| --- | --- | --- |
-| `build` | `tsdown` | Build ESM bundle + `.d.ts` declarations |
-| `typecheck` | `tsc --noEmit` | Type-check (no emit) |
-| `lint` | `oxlint .` | Lint with oxlint |
-| `lint:fix` | `oxlint . --fix` | Auto-fix lint issues |
-| `format` | `oxfmt .` | Format with oxfmt |
-| `format:check` | `oxfmt --check .` | Verify formatting |
+| Script         | Command           | Purpose                                 |
+| -------------- | ----------------- | --------------------------------------- |
+| `build`        | `tsdown`          | Build ESM bundle + `.d.ts` declarations |
+| `typecheck`    | `tsc --noEmit`    | Type-check (no emit)                    |
+| `lint`         | `oxlint .`        | Lint with oxlint                        |
+| `lint:fix`     | `oxlint . --fix`  | Auto-fix lint issues                    |
+| `format`       | `oxfmt .`         | Format with oxfmt                       |
+| `format:check` | `oxfmt --check .` | Verify formatting                       |
 
 ## Usage
 

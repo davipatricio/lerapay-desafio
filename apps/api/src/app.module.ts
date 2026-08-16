@@ -1,6 +1,9 @@
-import { Module } from '@nestjs/common';
+import { type MiddlewareConsumer, Module, type NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CorrelationIdMiddleware, HttpLoggerMiddleware, RequestContextModule } from './common';
+import { GatewayModule } from './gateway';
+import { HealthModule } from './health';
 
 @Module({
   imports: [
@@ -19,6 +22,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         username: config.get<string>('DB_USER', 'app'),
       }),
     }),
+    RequestContextModule,
+    GatewayModule,
+    HealthModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CorrelationIdMiddleware, HttpLoggerMiddleware).forRoutes('*');
+  }
+}
